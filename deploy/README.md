@@ -39,3 +39,15 @@ docker compose up -d --build
 - `PANEL_SUB_URL` — например `https://IP:2096/sub`.
 
 3. Проверьте `/start` в боте и `/stats` от админа. Каждый пользователь бота появится в панели как клиент `tg<telegram id>` на всех указанных inbound.
+
+## 4. Автообновление
+
+Сервер сам забирает ветку `main` с GitHub каждые 2 минуты и, если есть новые коммиты, пересобирает бота. `.env` и база не трогаются. Установка один раз:
+
+```bash
+cp /opt/npn/deploy/npn-autoupdate.* /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable --now npn-autoupdate.timer
+```
+
+Лог обновлений: `journalctl -u npn-autoupdate -n 50`. Репозиторий должен быть публичным, либо на сервере нужен deploy key с доступом на чтение.
