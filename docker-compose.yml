@@ -1,0 +1,9 @@
+services:
+  bot:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./data:/app/data
+    # Бот стоит на одном сервере с панелью Marzban и ходит к ней по 127.0.0.1
+    network_mode: host

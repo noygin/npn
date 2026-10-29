@@ -1,0 +1,80 @@
+import os
+
+import aiosqlite
+
+SCHEMA = """
+CREATE TABLE IF NOT EXISTS users (
+    tg_id INTEGER PRIMARY KEY,
+    username TEXT,
+    trial_used INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS payments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tg_id INTEGER NOT NULL,
+    tariff TEXT NOT NULL,
+    amount INTEGER NOT NULL,
+    currency TEXT NOT NULL,
+    charge_id TEXT NOT NULL UNIQUE,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+"""
+
+
+class Database:
+    def __init__(self, path: str):
+        self.path = path
+
+    async def init(self) -> None:
+        os.makedirs(os.path.dirname(self.path) or ".", exist_ok=True)
+        async with aiosqlite.connect(self.path) as db:
+            await db.executescript(SCHEMA)
+            await db.commit()
+
+    async def upsert_user(self, tg_id: int, username: str | None) -> None:
+        async with aiosqlite.connect(self.path) as db:
+            await db.execute(
+                "INSERT INTO users (tg_id, username) VALUES (?, ?) "
+                "ON CONFLICT(tg_id) DO UPDATE SET username = excluded.username",
+                (tg_id, username),
+            )
+            await db.commit()
+
+    async def take_trial(self, tg_id: int) -> bool:
+        """Помечает пробный период использованным. False, если он уже был."""
+        async with aiosqlite.connect(self.path) as db:
+            cur = await db.execute(
+                "UPDATE users SET trial_used = 1 WHERE tg_id = ? AND trial_used = 0",
+                (tg_id,),
+            )
+            await db.commit()
+            return cur.rowcount == 1
+
+    async def add_payment(
+        self, tg_id: int, tariff: str, amount: int, currency: str, charge_id: str
+    ) -> bool:
+        """Сохраняет платёж. False, если такой charge_id уже обработан."""
+        async with aiosqlite.connect(self.path) as db:
+            try:
+                await db.execute(
+                    "INSERT INTO payments (tg_id, tariff, amount, currency, charge_id) "
+                    "VALUES (?, ?, ?, ?, ?)",
+                    (tg_id, tariff, amount, currency, charge_id),
+                )
+            except aiosqlite.IntegrityError:
+                return False
+            await db.commit()
+            return True
+
+    async def stats(self) -> dict[str, int]:
+        async with aiosqlite.connect(self.path) as db:
+            users = (await (await db.execute("SELECT COUNT(*) FROM users")).fetchone())[0]
+            paid = (await (await db.execute("SELECT COUNT(*) FROM payments")).fetchone())[0]
+            stars = (
+                await (
+                    await db.execute(
+                        "SELECT COALESCE(SUM(amount), 0) FROM payments WHERE currency = 'XTR'"
+                    )
+                ).fetchone()
+            )[0]
+        return {"users": users, "payments": paid, "stars": stars}
