@@ -4,11 +4,13 @@ import logging
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
+from aiogram.types import BotCommand
 
 from bot import handlers
 from bot.config import Settings
 from bot.db import Database
 from bot.panel import XuiClient
+from bot.texts import plural_days
 
 
 async def main() -> None:
@@ -23,6 +25,15 @@ async def main() -> None:
         settings.panel_sub_url,
     )
     bot = Bot(settings.bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+    await bot.set_my_commands(
+        [BotCommand(command="start", description="Главное меню"),
+         BotCommand(command="help", description="Как подключиться")]
+    )
+    await bot.set_my_short_description("Быстрый VPN, который работает при блокировках.")
+    await bot.set_my_description(
+        f"n. — быстрый VPN, который работает при блокировках.\n\n"
+        f"Первые {plural_days(settings.trial_days)} бесплатно. Нажмите «Запустить»."
+    )
     dp = Dispatcher(db=db, panel=panel, settings=settings)
     dp.include_router(handlers.setup())
     try:

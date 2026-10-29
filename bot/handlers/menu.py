@@ -2,44 +2,84 @@ import logging
 
 import httpx
 from aiogram import F, Router
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command, CommandStart
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
 
-from bot import texts
+from bot import keyboards, texts
 from bot.config import Settings
 from bot.db import Database
-from bot.keyboards import back_menu, main_menu, tariffs_menu
 from bot.panel import PanelError, XuiClient, client_email
 
 router = Router()
 log = logging.getLogger(__name__)
 
 
-@router.message(CommandStart())
-async def start(message: Message, db: Database) -> None:
-    await db.upsert_user(message.from_user.id, message.from_user.username)
-    await message.answer(texts.WELCOME, reply_markup=main_menu())
-
-
-@router.callback_query(F.data == "menu")
-async def menu(call: CallbackQuery) -> None:
-    await call.message.edit_text(texts.WELCOME, reply_markup=main_menu())
+async def show(call: CallbackQuery, text: str, markup: InlineKeyboardMarkup) -> None:
+    """Перерисовывает текущее окно на месте, чтобы чат не засорялся."""
+    try:
+        await call.message.edit_text(text, reply_markup=markup, disable_web_page_preview=True)
+    except TelegramBadRequest as e:
+        if "message is not modified" not in str(e):
+            await call.message.answer(text, reply_markup=markup, disable_web_page_preview=True)
     await call.answer()
+
+
+async def home_screen(
+    tg_id: int, db: Database, panel: XuiClient, settings: Settings
+) -> tuple[str, InlineKeyboardMarkup]:
+    try:
+        sub = await panel.get_subscription(client_email(tg_id))
+    except (httpx.HTTPError, PanelError):
+        log.exception("get_subscription failed for %s", tg_id)
+        sub = None
+    trial_days = None if await db.trial_used(tg_id) else settings.trial_days
+    return texts.home(sub), keyboards.home(sub, trial_days, settings.support_username)
+
+
+@router.message(CommandStart())
+async def start(message: Message, db: Database, panel: XuiClient, settings: Settings) -> None:
+    await db.upsert_user(message.from_user.id, message.from_user.username)
+    text, markup = await home_screen(message.from_user.id, db, panel, settings)
+    await message.answer(text, reply_markup=markup)
+    try:
+        await message.delete()
+    except TelegramBadRequest:
+        pass
+
+
+@router.callback_query(F.data == "home")
+async def home(call: CallbackQuery, db: Database, panel: XuiClient, settings: Settings) -> None:
+    await show(call, *await home_screen(call.from_user.id, db, panel, settings))
+
+
+@router.callback_query(F.data == "help")
+async def help_(call: CallbackQuery) -> None:
+    await show(call, texts.HELP, keyboards.help_())
 
 
 @router.message(Command("help"))
-@router.callback_query(F.data == "help")
-async def help_(event: Message | CallbackQuery) -> None:
-    message = event.message if isinstance(event, CallbackQuery) else event
-    await message.answer(texts.HELP, reply_markup=back_menu(), disable_web_page_preview=True)
-    if isinstance(event, CallbackQuery):
-        await event.answer()
+async def help_command(message: Message) -> None:
+    await message.answer(texts.HELP, reply_markup=keyboards.help_(), disable_web_page_preview=True)
 
 
-@router.callback_query(F.data == "buy")
-async def buy(call: CallbackQuery) -> None:
-    await call.message.edit_text("Выберите срок подписки:", reply_markup=tariffs_menu())
-    await call.answer()
+@router.callback_query(F.data == "tariffs")
+async def tariffs(call: CallbackQuery) -> None:
+    await show(call, texts.tariffs(), keyboards.tariffs())
+
+
+@router.callback_query(F.data == "connect")
+async def connect(call: CallbackQuery, db: Database, panel: XuiClient, settings: Settings) -> None:
+    try:
+        sub = await panel.get_subscription(client_email(call.from_user.id))
+    except (httpx.HTTPError, PanelError):
+        log.exception("get_subscription failed for %s", call.from_user.id)
+        await call.answer(texts.PANEL_ERROR, show_alert=True)
+        return
+    if sub is None:
+        await show(call, *await home_screen(call.from_user.id, db, panel, settings))
+        return
+    await show(call, texts.connect(sub), keyboards.connect(sub))
 
 
 @router.callback_query(F.data == "trial")
@@ -56,23 +96,4 @@ async def trial(call: CallbackQuery, db: Database, panel: XuiClient, settings: S
         log.exception("trial failed for %s", call.from_user.id)
         await call.answer(texts.PANEL_ERROR, show_alert=True)
         return
-    await call.message.answer(
-        texts.subscription(sub), reply_markup=back_menu()
-    )
-    await call.answer()
-
-
-@router.message(Command("my"))
-@router.callback_query(F.data == "my")
-async def my(event: Message | CallbackQuery, panel: XuiClient) -> None:
-    message = event.message if isinstance(event, CallbackQuery) else event
-    try:
-        sub = await panel.get_subscription(client_email(event.from_user.id))
-    except (httpx.HTTPError, PanelError):
-        log.exception("get_user failed for %s", event.from_user.id)
-        text = texts.PANEL_ERROR
-    else:
-        text = texts.subscription(sub) if sub is not None else texts.NO_SUBSCRIPTION
-    await message.answer(text, reply_markup=back_menu())
-    if isinstance(event, CallbackQuery):
-        await event.answer()
+    await show(call, texts.connect(sub), keyboards.connect(sub))

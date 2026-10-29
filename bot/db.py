@@ -40,6 +40,13 @@ class Database:
             )
             await db.commit()
 
+    async def trial_used(self, tg_id: int) -> bool:
+        async with aiosqlite.connect(self.path) as db:
+            row = await (
+                await db.execute("SELECT trial_used FROM users WHERE tg_id = ?", (tg_id,))
+            ).fetchone()
+        return bool(row and row[0])
+
     async def take_trial(self, tg_id: int) -> bool:
         """Помечает пробный период использованным. False, если он уже был."""
         async with aiosqlite.connect(self.path) as db:

@@ -4,10 +4,9 @@ import httpx
 from aiogram import Bot, F, Router
 from aiogram.types import CallbackQuery, LabeledPrice, Message, PreCheckoutQuery
 
-from bot import texts
+from bot import keyboards, texts
 from bot.config import Settings
 from bot.db import Database
-from bot.keyboards import back_menu
 from bot.panel import PanelError, XuiClient, client_email
 from bot.tariffs import TARIFFS
 
@@ -22,7 +21,7 @@ async def send_invoice(call: CallbackQuery) -> None:
         await call.answer()
         return
     await call.message.answer_invoice(
-        title=f"VPN · {tariff.title}",
+        title=f"n. VPN · {tariff.title}",
         description=f"Доступ к VPN на {tariff.days} дней",
         payload=tariff.code,
         currency="XTR",
@@ -64,6 +63,5 @@ async def successful_payment(
             )
         return
     await message.answer(
-        "Спасибо за оплату! 🎉\n\n" + texts.subscription(sub),
-        reply_markup=back_menu(),
+        texts.paid(sub), reply_markup=keyboards.connect(sub), disable_web_page_preview=True
     )

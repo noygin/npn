@@ -1,29 +1,65 @@
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.types import CopyTextButton, InlineKeyboardButton, InlineKeyboardMarkup
 
+from bot.panel import Subscription
 from bot.tariffs import TARIFFS
+from bot.texts import plural_days
+
+APP_IOS = "https://apps.apple.com/app/happ-proxy-utility/id6504287215"
+APP_ANDROID = "https://play.google.com/store/apps/details?id=com.happproxy"
+APP_DESKTOP = "https://github.com/hiddify/hiddify-app/releases"
+
+BACK = InlineKeyboardButton(text="← Назад", callback_data="home")
 
 
-def main_menu() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text="🎁 Попробовать бесплатно", callback_data="trial")],
-            [InlineKeyboardButton(text="💳 Купить подписку", callback_data="buy")],
-            [InlineKeyboardButton(text="🔑 Моя подписка", callback_data="my")],
-            [InlineKeyboardButton(text="📖 Как подключиться", callback_data="help")],
+def _kb(*rows: list[InlineKeyboardButton]) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[row for row in rows if row])
+
+
+def home(
+    sub: Subscription | None, trial_days: int | None, support: str
+) -> InlineKeyboardMarkup:
+    """trial_days=None, если пробный период уже использован."""
+    if sub is not None:
+        first = [
+            InlineKeyboardButton(text="Подключиться", callback_data="connect"),
+            InlineKeyboardButton(text="Продлить", callback_data="tariffs"),
         ]
+    else:
+        first = [InlineKeyboardButton(text="Тарифы", callback_data="tariffs")]
+    trial = (
+        [InlineKeyboardButton(text=f"Попробовать {plural_days(trial_days)} бесплатно", callback_data="trial")]
+        if sub is None and trial_days
+        else []
+    )
+    last = [InlineKeyboardButton(text="Инструкция", callback_data="help")]
+    if support:
+        last.append(InlineKeyboardButton(text="Поддержка", url=f"https://t.me/{support}"))
+    return _kb(trial, first, last)
+
+
+def connect(sub: Subscription) -> InlineKeyboardMarkup:
+    return _kb(
+        [InlineKeyboardButton(text="Скопировать ссылку", copy_text=CopyTextButton(text=sub.url))],
+        [InlineKeyboardButton(text="Инструкция", callback_data="help"), BACK],
     )
 
 
-def tariffs_menu() -> InlineKeyboardMarkup:
-    rows = [
-        [InlineKeyboardButton(text=f"{t.title} · {t.stars} ⭐", callback_data=f"buy:{t.code}")]
-        for t in TARIFFS.values()
-    ]
-    rows.append([InlineKeyboardButton(text="← Назад", callback_data="menu")])
-    return InlineKeyboardMarkup(inline_keyboard=rows)
+def tariffs() -> InlineKeyboardMarkup:
+    return _kb(
+        *[
+            [InlineKeyboardButton(text=f"{t.title} · {t.stars} ⭐", callback_data=f"buy:{t.code}")]
+            for t in TARIFFS.values()
+        ],
+        [BACK],
+    )
 
 
-def back_menu() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        inline_keyboard=[[InlineKeyboardButton(text="← В меню", callback_data="menu")]]
+def help_() -> InlineKeyboardMarkup:
+    return _kb(
+        [
+            InlineKeyboardButton(text="iPhone", url=APP_IOS),
+            InlineKeyboardButton(text="Android", url=APP_ANDROID),
+            InlineKeyboardButton(text="Компьютер", url=APP_DESKTOP),
+        ],
+        [InlineKeyboardButton(text="Подключение", callback_data="connect"), BACK],
     )
