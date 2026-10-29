@@ -43,3 +43,15 @@ def test_home_keyboard_offers_trial_only_without_subscription():
     assert not any("бесплатно" in t for t in labels(keyboards.home(None, None, "")))
     sub = Subscription(True, 0, 0, "https://x/sub/s")
     assert labels(keyboards.home(sub, 3, "help"))[:2] == ["Подключиться", "Продлить"]
+
+
+def test_personal_greeting_matches_username_case_insensitively():
+    from bot.config import Settings
+
+    s = Settings(
+        bot_token="1:x", panel_url="x", panel_api_token="t", panel_inbound_ids=[1],
+        panel_sub_url="y", greetings={"@Friend": ["привет"]},
+    )
+    assert s.greeting_for("friend") == "привет"
+    assert s.greeting_for("other") is None
+    assert s.greeting_for(None) is None

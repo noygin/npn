@@ -1,5 +1,6 @@
 import time
 from datetime import datetime, timezone
+from html import escape
 
 from bot.panel import Subscription
 from bot.tariffs import TARIFFS
@@ -50,10 +51,11 @@ def status_line(sub: Subscription | None) -> str:
     return f"Подписка активна до {fmt_date(sub.expire)}, осталось {plural_days(days_left(sub.expire))}."
 
 
-def home(sub: Subscription | None) -> str:
+def home(sub: Subscription | None, greeting: str | None = None) -> str:
+    intro = escape(greeting) if greeting else "Быстрый VPN, который работает при блокировках."
     return (
         f"{BRAND}\n\n"
-        "Быстрый VPN, который работает при блокировках.\n\n"
+        f"{intro}\n\n"
         f"{status_line(sub)}"
     )
 

@@ -1,3 +1,5 @@
+import random
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -17,3 +19,11 @@ class Settings(BaseSettings):
     db_path: str = "data/bot.db"
     trial_days: int = 3
     support_username: str = ""
+    # Личные приветствия: {"username": ["фраза", ...]}, username без @
+    greetings: dict[str, list[str]] = {}
+
+    def greeting_for(self, username: str | None) -> str | None:
+        phrases = {k.lower().lstrip("@"): v for k, v in self.greetings.items()}.get(
+            (username or "").lower()
+        )
+        return random.choice(phrases) if phrases else None
