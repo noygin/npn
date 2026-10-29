@@ -31,6 +31,8 @@ async def home_screen(
     tg_id = user.id
     try:
         sub = await panel.get_subscription(client_email(tg_id))
+        if settings.is_free(user.username) and (sub is None or sub.expire != 0 or not sub.active):
+            sub = await panel.extend(client_email(tg_id), None, tg_id)
     except (httpx.HTTPError, PanelError):
         log.exception("get_subscription failed for %s", tg_id)
         sub = None

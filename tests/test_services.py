@@ -78,3 +78,16 @@ async def test_extend_keeps_client_fields_and_extends_expiry():
 async def test_missing_client_has_no_subscription():
     transport, _ = fake_panel(None)
     assert await make_client(transport).get_subscription("tg1") is None
+
+
+async def test_unlimited_subscription_is_created_without_expiry():
+    transport, calls = fake_panel(None)
+    sub = await make_client(transport).extend("tg1", None)
+    assert json.loads(calls[-1].content)["client"]["expiryTime"] == 0
+    assert sub.active and sub.expire == 0
+
+
+async def test_paying_does_not_cut_unlimited_subscription():
+    transport, calls = fake_panel({"client": {"email": "tg1", "subId": "s", "expiryTime": 0, "enable": True}})
+    await make_client(transport).extend("tg1", 30)
+    assert json.loads(calls[-1].content)["expiryTime"] == 0

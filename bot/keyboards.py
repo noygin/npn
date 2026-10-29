@@ -19,7 +19,9 @@ def home(
     sub: Subscription | None, trial_days: int | None, support: str
 ) -> InlineKeyboardMarkup:
     """trial_days=None, если пробный период уже использован."""
-    if sub is not None:
+    if sub is not None and sub.active and sub.expire == 0:
+        first = [InlineKeyboardButton(text="Подключиться", callback_data="connect")]
+    elif sub is not None:
         first = [
             InlineKeyboardButton(text="Подключиться", callback_data="connect"),
             InlineKeyboardButton(text="Продлить", callback_data="tariffs"),

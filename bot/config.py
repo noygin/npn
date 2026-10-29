@@ -21,6 +21,13 @@ class Settings(BaseSettings):
     support_username: str = ""
     # Личные приветствия: {"username": ["фраза", ...]}, username без @
     greetings: dict[str, list[str]] = {}
+    # Пользователи с бесплатной бессрочной подпиской, username без @
+    free_users: list[str] = []
+
+    def is_free(self, username: str | None) -> bool:
+        return bool(username) and username.lower() in {
+            u.lower().lstrip("@") for u in self.free_users
+        }
 
     def greeting_for(self, username: str | None) -> str | None:
         phrases = {k.lower().lstrip("@"): v for k, v in self.greetings.items()}.get(

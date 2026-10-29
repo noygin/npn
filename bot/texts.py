@@ -47,7 +47,7 @@ def status_line(sub: Subscription | None) -> str:
     if not sub.active:
         return "Подписка закончилась."
     if sub.expire == 0:
-        return "Подписка активна, без срока."
+        return "Подписка активна, бессрочно."
     return f"Подписка активна до {fmt_date(sub.expire)}, осталось {plural_days(days_left(sub.expire))}."
 
 

@@ -79,9 +79,19 @@ class XuiClient:
             return None
         return self._subscription(obj["client"], obj.get("usedTraffic", 0))
 
-    async def extend(self, email: str, days: int, tg_id: int = 0) -> Subscription:
-        """Создаёт клиента или продлевает ему подписку на days дней."""
+    async def extend(self, email: str, days: int | None, tg_id: int = 0) -> Subscription:
+        """Создаёт клиента или продлевает ему подписку на days дней.
+
+        days=None делает подписку бессрочной. Бессрочная подписка при продлении
+        остаётся бессрочной.
+        """
         now = int(time.time())
+
+        def new_expire_ms(current: int | None) -> int:
+            if days is None or current == 0:
+                return 0
+            return compute_expire(current, now, days) * 1000
+
         obj = await self._get_client(email)
         if obj is None:
             client = {
@@ -90,7 +100,7 @@ class XuiClient:
                 "flow": self._flow,
                 "limitIp": 0,
                 "totalGB": 0,
-                "expiryTime": compute_expire(None, now, days) * 1000,
+                "expiryTime": new_expire_ms(None),
                 "enable": True,
                 "tgId": tg_id,
                 "comment": "bot",
@@ -110,8 +120,7 @@ class XuiClient:
                           "tgId", "group", "comment", "reset")
                 if k in current
             }
-            current_expire = (current.get("expiryTime") or 0) // 1000
-            client["expiryTime"] = compute_expire(current_expire, now, days) * 1000
+            client["expiryTime"] = new_expire_ms((current.get("expiryTime") or 0) // 1000)
             client["enable"] = True
             data = await self._call("POST", f"/clients/update/{email}", json=client)
             used = obj.get("usedTraffic", 0)
