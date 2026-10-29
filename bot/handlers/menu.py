@@ -38,7 +38,9 @@ async def home_screen(
         sub = None
     trial_days = None if await db.trial_used(tg_id) else settings.trial_days
     greeting = settings.greeting_for(user.username)
-    return texts.home(sub, greeting), keyboards.home(sub, trial_days, settings.support_username)
+    return texts.home(sub, greeting), keyboards.home(
+        sub, trial_days, settings.support_username, tg_id in settings.admin_ids
+    )
 
 
 @router.message(CommandStart())
@@ -55,6 +57,11 @@ async def start(message: Message, db: Database, panel: XuiClient, settings: Sett
 @router.callback_query(F.data == "home")
 async def home(call: CallbackQuery, db: Database, panel: XuiClient, settings: Settings) -> None:
     await show(call, *await home_screen(call.from_user, db, panel, settings))
+
+
+@router.message(Command("id"))
+async def my_id(message: Message) -> None:
+    await message.answer(f"Ваш Telegram ID: <code>{message.from_user.id}</code>")
 
 
 @router.callback_query(F.data == "help")

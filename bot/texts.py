@@ -94,3 +94,69 @@ HELP = (
 
 def paid(sub: Subscription) -> str:
     return f"Оплата прошла, спасибо!\n\n{connect(sub)}"
+
+
+def gift(sub: Subscription) -> str:
+    when = "бессрочно" if sub.expire == 0 else f"до {fmt_date(sub.expire)}"
+    return f"{BRAND}\n\nВам выдали доступ к VPN, {when}. Нажмите «Открыть», чтобы подключиться."
+
+
+REMIND_SOON = (
+    f"{BRAND}\n\nПодписка закончится завтра. Продлите её, чтобы VPN не отключился."
+)
+REMIND_ENDED = f"{BRAND}\n\nПодписка закончилась. Продлите её, чтобы снова пользоваться VPN."
+
+
+def admin(stats: dict[str, int]) -> str:
+    return (
+        f"{BRAND}  Админка\n\n"
+        f"Пользователей: {stats['users']}\n"
+        f"Платежей: {stats['payments']}\n"
+        f"Звёзд получено: {stats['stars']}"
+    )
+
+
+ADMIN_GIVE_HELP = (
+    f"{BRAND}  Выдать доступ\n\n"
+    "Пришлите ID или @username и срок в днях:\n"
+    "<code>123456789 30</code>\n"
+    "<code>@friend навсегда</code>\n\n"
+    "Без срока будет 30 дней. Если доступ уже есть, срок добавится к нему. "
+    "Свой ID человек может узнать командой /id в боте."
+)
+ADMIN_TAKE_HELP = (
+    f"{BRAND}  Забрать доступ\n\n"
+    "Пришлите ID или @username. Подписка выключится сразу."
+)
+ADMIN_NOT_FOUND = (
+    "Не нашёл такого человека. По @username ищу только тех, кто уже запускал бота. "
+    "Пришлите числовой ID: его можно узнать командой /id."
+)
+
+
+def who(tg_id: int, username: str | None) -> str:
+    return f"@{escape(username)} ({tg_id})" if username else str(tg_id)
+
+
+def admin_given(tg_id: int, username: str | None, sub: Subscription, notified: bool) -> str:
+    when = "бессрочно" if sub.expire == 0 else f"до {fmt_date(sub.expire)}"
+    note = (
+        "Уведомление отправлено."
+        if notified
+        else "Уведомить не вышло: человек ещё не запускал бота. Доступ появится, когда он нажмёт /start."
+    )
+    return f"Готово: {who(tg_id, username)}, доступ {when}.\n{note}"
+
+
+def admin_taken(tg_id: int, username: str | None, ok: bool) -> str:
+    if not ok:
+        return f"У {who(tg_id, username)} нет подписки."
+    return f"Готово: доступ {who(tg_id, username)} выключен."
+
+
+def admin_users(rows: list[tuple[int, str | None, str]]) -> str:
+    lines = [f"{BRAND}  Последние пользователи", ""]
+    lines += [f"{who(tg_id, username)}: {status}" for tg_id, username, status in rows]
+    if not rows:
+        lines.append("Пока никого.")
+    return "\n".join(lines)

@@ -67,3 +67,30 @@ def test_free_users():
         panel_sub_url="y", free_users=["@Friend"],
     )
     assert s.is_free("friend") and not s.is_free("other") and not s.is_free(None)
+
+
+def test_parse_duration():
+    from bot.handlers.admin import parse_duration
+
+    assert parse_duration(None) == 30
+    assert parse_duration("7") == 7
+    assert parse_duration("Навсегда") is None
+    assert parse_duration("0") is False and parse_duration("abc") is False
+
+
+def test_reminder_kind():
+    from bot.reminders import reminder_kind
+
+    now = 1_000_000
+    assert reminder_kind(0, now) is None
+    assert reminder_kind(now + 3 * DAY, now) is None
+    assert reminder_kind(now + DAY // 2, now) == "soon"
+    assert reminder_kind(now - 10, now) == "ended"
+    assert reminder_kind(now - 3 * DAY, now) is None
+
+
+def test_tg_id_from_email():
+    from bot.panel import tg_id_from_email
+
+    assert tg_id_from_email("tg123") == 123
+    assert tg_id_from_email("main") is None and tg_id_from_email("tgx") is None

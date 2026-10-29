@@ -16,7 +16,7 @@ def _kb(*rows: list[InlineKeyboardButton]) -> InlineKeyboardMarkup:
 
 
 def home(
-    sub: Subscription | None, trial_days: int | None, support: str
+    sub: Subscription | None, trial_days: int | None, support: str, is_admin: bool = False
 ) -> InlineKeyboardMarkup:
     """trial_days=None, если пробный период уже использован."""
     if sub is not None and sub.active and sub.expire == 0:
@@ -36,7 +36,8 @@ def home(
     last = [InlineKeyboardButton(text="Инструкция", callback_data="help")]
     if support:
         last.append(InlineKeyboardButton(text="Поддержка", url=f"https://t.me/{support}"))
-    return _kb(trial, first, last)
+    admin_row = [InlineKeyboardButton(text="Админка", callback_data="admin")] if is_admin else []
+    return _kb(trial, first, last, admin_row)
 
 
 def connect(sub: Subscription) -> InlineKeyboardMarkup:
@@ -65,3 +66,33 @@ def help_() -> InlineKeyboardMarkup:
         ],
         [InlineKeyboardButton(text="Подключение", callback_data="connect"), BACK],
     )
+
+
+def open_home() -> InlineKeyboardMarkup:
+    return _kb([InlineKeyboardButton(text="Открыть", callback_data="home")])
+
+
+def renew() -> InlineKeyboardMarkup:
+    return _kb(
+        [InlineKeyboardButton(text="Продлить", callback_data="tariffs")],
+        [InlineKeyboardButton(text="Главное меню", callback_data="home")],
+    )
+
+
+def admin() -> InlineKeyboardMarkup:
+    return _kb(
+        [
+            InlineKeyboardButton(text="Выдать доступ", callback_data="admin:give"),
+            InlineKeyboardButton(text="Забрать", callback_data="admin:take"),
+        ],
+        [InlineKeyboardButton(text="Пользователи", callback_data="admin:users")],
+        [BACK],
+    )
+
+
+def admin_cancel() -> InlineKeyboardMarkup:
+    return _kb([InlineKeyboardButton(text="Отмена", callback_data="admin")])
+
+
+def admin_back() -> InlineKeyboardMarkup:
+    return _kb([InlineKeyboardButton(text="← Админка", callback_data="admin")])

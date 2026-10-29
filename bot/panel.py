@@ -19,6 +19,11 @@ def client_email(tg_id: int) -> str:
     return f"tg{tg_id}"
 
 
+def tg_id_from_email(email: str) -> int | None:
+    rest = email.removeprefix("tg")
+    return int(rest) if rest != email and rest.isdigit() else None
+
+
 @dataclass
 class Subscription:
     active: bool
@@ -112,18 +117,41 @@ class XuiClient:
             used = 0
         else:
             current = obj["client"]
-            # Обновление в 3x-ui заменяет все поля, кроме ключей доступа,
-            # поэтому передаём текущие значения целиком.
-            client = {
-                k: current[k]
-                for k in ("email", "subId", "flow", "security", "limitIp", "totalGB",
-                          "tgId", "group", "comment", "reset")
-                if k in current
-            }
-            client["expiryTime"] = new_expire_ms((current.get("expiryTime") or 0) // 1000)
-            client["enable"] = True
-            data = await self._call("POST", f"/clients/update/{email}", json=client)
+            client, data = await self._update(
+                current,
+                expiryTime=new_expire_ms((current.get("expiryTime") or 0) // 1000),
+                enable=True,
+            )
             used = obj.get("usedTraffic", 0)
         if not data["success"]:
             raise PanelError(data.get("msg"))
         return self._subscription(client, used)
+
+    async def _update(self, current: dict, **changes) -> tuple[dict, dict]:
+        # Обновление в 3x-ui заменяет все поля, кроме ключей доступа,
+        # поэтому передаём текущие значения целиком.
+        client = {
+            k: current[k]
+            for k in ("email", "subId", "flow", "security", "limitIp", "totalGB",
+                      "expiryTime", "enable", "tgId", "group", "comment", "reset")
+            if k in current
+        }
+        client.update(changes)
+        data = await self._call("POST", f"/clients/update/{current['email']}", json=client)
+        return client, data
+
+    async def disable(self, email: str) -> bool:
+        """Выключает клиента. False, если такого клиента нет."""
+        obj = await self._get_client(email)
+        if obj is None:
+            return False
+        _, data = await self._update(obj["client"], enable=False)
+        if not data["success"]:
+            raise PanelError(data.get("msg"))
+        return True
+
+    async def list_clients(self) -> list[dict]:
+        data = await self._call("GET", "/clients/list")
+        if not data["success"]:
+            raise PanelError(data.get("msg"))
+        return data["obj"] or []

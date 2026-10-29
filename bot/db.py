@@ -9,6 +9,12 @@ CREATE TABLE IF NOT EXISTS users (
     trial_used INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+CREATE TABLE IF NOT EXISTS reminders (
+    tg_id INTEGER NOT NULL,
+    expire INTEGER NOT NULL,
+    kind TEXT NOT NULL,
+    PRIMARY KEY (tg_id, expire, kind)
+);
 CREATE TABLE IF NOT EXISTS payments (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     tg_id INTEGER NOT NULL,
@@ -72,6 +78,43 @@ class Database:
                 return False
             await db.commit()
             return True
+
+    async def find_user(self, query: str) -> tuple[int, str | None] | None:
+        """Ищет пользователя по Telegram ID или @username."""
+        query = query.strip()
+        async with aiosqlite.connect(self.path) as db:
+            if query.lstrip("@").isdigit() and not query.startswith("@"):
+                row = await (
+                    await db.execute("SELECT tg_id, username FROM users WHERE tg_id = ?", (int(query),))
+                ).fetchone()
+                return (row[0], row[1]) if row else (int(query), None)
+            row = await (
+                await db.execute(
+                    "SELECT tg_id, username FROM users WHERE lower(username) = lower(?)",
+                    (query.lstrip("@"),),
+                )
+            ).fetchone()
+        return (row[0], row[1]) if row else None
+
+    async def recent_users(self, limit: int = 20) -> list[tuple[int, str | None, str]]:
+        async with aiosqlite.connect(self.path) as db:
+            rows = await (
+                await db.execute(
+                    "SELECT tg_id, username, created_at FROM users ORDER BY created_at DESC LIMIT ?",
+                    (limit,),
+                )
+            ).fetchall()
+        return [(r[0], r[1], r[2]) for r in rows]
+
+    async def mark_reminded(self, tg_id: int, expire: int, kind: str) -> bool:
+        """Запоминает напоминание. False, если оно уже было отправлено."""
+        async with aiosqlite.connect(self.path) as db:
+            cur = await db.execute(
+                "INSERT OR IGNORE INTO reminders (tg_id, expire, kind) VALUES (?, ?, ?)",
+                (tg_id, expire, kind),
+            )
+            await db.commit()
+            return cur.rowcount == 1
 
     async def stats(self) -> dict[str, int]:
         async with aiosqlite.connect(self.path) as db:

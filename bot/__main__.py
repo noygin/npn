@@ -6,7 +6,7 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.types import BotCommand
 
-from bot import handlers
+from bot import handlers, reminders
 from bot.config import Settings
 from bot.db import Database
 from bot.panel import XuiClient
@@ -27,7 +27,8 @@ async def main() -> None:
     bot = Bot(settings.bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     await bot.set_my_commands(
         [BotCommand(command="start", description="Главное меню"),
-         BotCommand(command="help", description="Как подключиться")]
+         BotCommand(command="help", description="Как подключиться"),
+         BotCommand(command="id", description="Мой Telegram ID")]
     )
     await bot.set_my_short_description("Быстрый VPN, который работает при блокировках.")
     await bot.set_my_description(
@@ -36,9 +37,11 @@ async def main() -> None:
     )
     dp = Dispatcher(db=db, panel=panel, settings=settings)
     dp.include_router(handlers.setup())
+    reminders_task = asyncio.create_task(reminders.run(bot, db, panel))
     try:
         await dp.start_polling(bot)
     finally:
+        reminders_task.cancel()
         await panel.close()
 
 

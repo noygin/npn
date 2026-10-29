@@ -91,3 +91,33 @@ async def test_paying_does_not_cut_unlimited_subscription():
     transport, calls = fake_panel({"client": {"email": "tg1", "subId": "s", "expiryTime": 0, "enable": True}})
     await make_client(transport).extend("tg1", 30)
     assert json.loads(calls[-1].content)["expiryTime"] == 0
+
+
+async def test_find_user_by_id_and_username(tmp_path):
+    db = Database(str(tmp_path / "bot.db"))
+    await db.init()
+    await db.upsert_user(42, "Friend")
+    assert await db.find_user("@friend") == (42, "Friend")
+    assert await db.find_user("42") == (42, "Friend")
+    assert await db.find_user("777") == (777, None)
+    assert await db.find_user("@nobody") is None
+
+
+async def test_reminder_is_sent_once(tmp_path):
+    db = Database(str(tmp_path / "bot.db"))
+    await db.init()
+    assert await db.mark_reminded(1, 100, "soon")
+    assert not await db.mark_reminded(1, 100, "soon")
+    assert await db.mark_reminded(1, 100, "ended")
+
+
+async def test_disable_keeps_other_fields():
+    transport, calls = fake_panel({"client": {"email": "tg1", "subId": "s", "expiryTime": 5, "enable": True}})
+    assert await make_client(transport).disable("tg1")
+    body = json.loads(calls[-1].content)
+    assert body == {"email": "tg1", "subId": "s", "expiryTime": 5, "enable": False}
+
+
+async def test_disable_missing_client():
+    transport, _ = fake_panel(None)
+    assert not await make_client(transport).disable("tg1")
