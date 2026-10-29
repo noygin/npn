@@ -1,3 +1,5 @@
+from urllib.parse import quote
+
 from aiogram.types import CopyTextButton, InlineKeyboardButton, InlineKeyboardMarkup
 
 from bot.panel import Subscription
@@ -33,7 +35,10 @@ def home(
         if sub is None and trial_days
         else []
     )
-    last = [InlineKeyboardButton(text="Инструкция", callback_data="help")]
+    last = [
+        InlineKeyboardButton(text="Инструкция", callback_data="help"),
+        InlineKeyboardButton(text="Пригласить друга", callback_data="invite"),
+    ]
     if support:
         last.append(InlineKeyboardButton(text="Поддержка", url=f"https://t.me/{support}"))
     admin_row = [InlineKeyboardButton(text="Админка", callback_data="admin")] if is_admin else []
@@ -96,3 +101,12 @@ def admin_cancel() -> InlineKeyboardMarkup:
 
 def admin_back() -> InlineKeyboardMarkup:
     return _kb([InlineKeyboardButton(text="← Админка", callback_data="admin")])
+
+
+def invite(link: str) -> InlineKeyboardMarkup:
+    share = f"https://t.me/share/url?url={quote(link)}&text={quote('Быстрый VPN, работает при блокировках')}"
+    return _kb(
+        [InlineKeyboardButton(text="Отправить другу", url=share)],
+        [InlineKeyboardButton(text="Скопировать ссылку", copy_text=CopyTextButton(text=link))],
+        [BACK],
+    )

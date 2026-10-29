@@ -94,3 +94,11 @@ def test_tg_id_from_email():
 
     assert tg_id_from_email("tg123") == 123
     assert tg_id_from_email("main") is None and tg_id_from_email("tgx") is None
+
+
+def test_parse_referrer():
+    from bot.handlers.menu import parse_referrer
+
+    assert parse_referrer("ref123") == 123
+    assert parse_referrer(None) is None
+    assert parse_referrer("refx") is None and parse_referrer("123") is None

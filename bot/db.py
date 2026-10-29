@@ -7,6 +7,8 @@ CREATE TABLE IF NOT EXISTS users (
     tg_id INTEGER PRIMARY KEY,
     username TEXT,
     trial_used INTEGER NOT NULL DEFAULT 0,
+    referred_by INTEGER,
+    referral_rewarded INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE IF NOT EXISTS reminders (
@@ -35,6 +37,14 @@ class Database:
         os.makedirs(os.path.dirname(self.path) or ".", exist_ok=True)
         async with aiosqlite.connect(self.path) as db:
             await db.executescript(SCHEMA)
+            # Миграции для баз, созданных до появления колонок
+            columns = {row[1] for row in await db.execute_fetchall("PRAGMA table_info(users)")}
+            if "referred_by" not in columns:
+                await db.execute("ALTER TABLE users ADD COLUMN referred_by INTEGER")
+            if "referral_rewarded" not in columns:
+                await db.execute(
+                    "ALTER TABLE users ADD COLUMN referral_rewarded INTEGER NOT NULL DEFAULT 0"
+                )
             await db.commit()
 
     async def upsert_user(self, tg_id: int, username: str | None) -> None:
@@ -45,6 +55,58 @@ class Database:
                 (tg_id, username),
             )
             await db.commit()
+
+    async def register(self, tg_id: int, username: str | None, referrer: int | None) -> bool:
+        """Добавляет пользователя. True, если он новый.
+
+        Пригласивший запоминается только для новых пользователей и только если
+        сам уже есть в базе.
+        """
+        async with aiosqlite.connect(self.path) as db:
+            cur = await db.execute(
+                "INSERT OR IGNORE INTO users (tg_id, username) VALUES (?, ?)", (tg_id, username)
+            )
+            is_new = cur.rowcount == 1
+            if not is_new:
+                await db.execute(
+                    "UPDATE users SET username = ? WHERE tg_id = ?", (username, tg_id)
+                )
+            elif referrer is not None and referrer != tg_id:
+                await db.execute(
+                    "UPDATE users SET referred_by = ? WHERE tg_id = ? "
+                    "AND EXISTS (SELECT 1 FROM users WHERE tg_id = ?)",
+                    (referrer, tg_id, referrer),
+                )
+            await db.commit()
+        return is_new
+
+    async def take_referral_reward(self, tg_id: int) -> int | None:
+        """Возвращает пригласившего, если за этого пользователя ещё не награждали."""
+        async with aiosqlite.connect(self.path) as db:
+            row = await (
+                await db.execute(
+                    "SELECT referred_by FROM users WHERE tg_id = ? "
+                    "AND referred_by IS NOT NULL AND referral_rewarded = 0",
+                    (tg_id,),
+                )
+            ).fetchone()
+            if row is None:
+                return None
+            await db.execute("UPDATE users SET referral_rewarded = 1 WHERE tg_id = ?", (tg_id,))
+            await db.commit()
+        return row[0]
+
+    async def referral_stats(self, tg_id: int) -> tuple[int, int]:
+        """Сколько человек пригласил и сколько из них уже оплатили."""
+        async with aiosqlite.connect(self.path) as db:
+            row = await (
+                await db.execute(
+                    "SELECT COUNT(*), COALESCE(SUM(referral_rewarded), 0) FROM users "
+                    "WHERE referred_by = ?",
+                    (tg_id,),
+                )
+            ).fetchone()
+        return row[0], row[1]
 
     async def trial_used(self, tg_id: int) -> bool:
         async with aiosqlite.connect(self.path) as db:

@@ -2,6 +2,7 @@ import logging
 
 import httpx
 from aiogram import Bot, F, Router
+from aiogram.exceptions import TelegramAPIError
 from aiogram.types import CallbackQuery, LabeledPrice, Message, PreCheckoutQuery
 
 from bot import keyboards, texts
@@ -65,3 +66,24 @@ async def successful_payment(
     await message.answer(
         texts.paid(sub), reply_markup=keyboards.connect(sub), disable_web_page_preview=True
     )
+    await reward_referrer(tg_id, bot, db, panel, settings)
+
+
+async def reward_referrer(
+    tg_id: int, bot: Bot, db: Database, panel: XuiClient, settings: Settings
+) -> None:
+    referrer = await db.take_referral_reward(tg_id)
+    if referrer is None:
+        return
+    try:
+        sub = await panel.extend(client_email(referrer), settings.referral_days, referrer)
+    except (httpx.HTTPError, PanelError):
+        log.exception("referral reward failed for %s", referrer)
+        return
+    try:
+        await bot.send_message(
+            referrer, texts.referral_reward(settings.referral_days, sub),
+            reply_markup=keyboards.open_home(),
+        )
+    except TelegramAPIError:
+        pass

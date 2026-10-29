@@ -121,3 +121,37 @@ async def test_disable_keeps_other_fields():
 async def test_disable_missing_client():
     transport, _ = fake_panel(None)
     assert not await make_client(transport).disable("tg1")
+
+
+async def test_referral_is_rewarded_once_and_only_for_new_users(tmp_path):
+    db = Database(str(tmp_path / "bot.db"))
+    await db.init()
+    await db.register(1, "inviter", None)
+    assert await db.register(2, "friend", 1)
+    assert not await db.register(1, "inviter", 2)  # старый пользователь не меняет пригласившего
+    assert await db.register(3, "self", 3)  # сам себя пригласить нельзя
+    assert await db.register(4, "ghost", 999)  # пригласивший должен быть в базе
+    assert await db.referral_stats(1) == (1, 0)
+    assert await db.take_referral_reward(2) == 1
+    assert await db.take_referral_reward(2) is None
+    assert await db.take_referral_reward(3) is None
+    assert await db.take_referral_reward(4) is None
+    assert await db.referral_stats(1) == (1, 1)
+
+
+async def test_migration_adds_referral_columns(tmp_path):
+    import aiosqlite
+
+    path = str(tmp_path / "bot.db")
+    async with aiosqlite.connect(path) as conn:
+        await conn.execute(
+            "CREATE TABLE users (tg_id INTEGER PRIMARY KEY, username TEXT, "
+            "trial_used INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"
+        )
+        await conn.execute("INSERT INTO users (tg_id, username) VALUES (1, 'old')")
+        await conn.commit()
+    db = Database(path)
+    await db.init()
+    await db.init()  # повторный запуск не падает
+    assert await db.register(2, "new", 1)
+    assert await db.referral_stats(1) == (1, 0)

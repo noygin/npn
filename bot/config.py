@@ -18,6 +18,8 @@ class Settings(BaseSettings):
 
     db_path: str = "data/bot.db"
     trial_days: int = 3
+    # Сколько дней получает пригласивший, когда друг впервые оплатит
+    referral_days: int = 7
     support_username: str = ""
     # Личные приветствия: {"username": ["фраза", ...]}, username без @
     greetings: dict[str, list[str]] = {}

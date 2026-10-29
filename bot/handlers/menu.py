@@ -1,9 +1,9 @@
 import logging
 
 import httpx
-from aiogram import F, Router
+from aiogram import Bot, F, Router
 from aiogram.exceptions import TelegramBadRequest
-from aiogram.filters import Command, CommandStart
+from aiogram.filters import Command, CommandObject, CommandStart
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message, User
 
 from bot import keyboards, texts
@@ -43,9 +43,22 @@ async def home_screen(
     )
 
 
+def parse_referrer(payload: str | None) -> int | None:
+    rest = (payload or "").removeprefix("ref")
+    return int(rest) if rest != payload and rest.isdigit() else None
+
+
 @router.message(CommandStart())
-async def start(message: Message, db: Database, panel: XuiClient, settings: Settings) -> None:
-    await db.upsert_user(message.from_user.id, message.from_user.username)
+async def start(
+    message: Message,
+    command: CommandObject,
+    db: Database,
+    panel: XuiClient,
+    settings: Settings,
+) -> None:
+    await db.register(
+        message.from_user.id, message.from_user.username, parse_referrer(command.args)
+    )
     text, markup = await home_screen(message.from_user, db, panel, settings)
     await message.answer(text, reply_markup=markup)
     try:
@@ -62,6 +75,16 @@ async def home(call: CallbackQuery, db: Database, panel: XuiClient, settings: Se
 @router.message(Command("id"))
 async def my_id(message: Message) -> None:
     await message.answer(f"Ваш Telegram ID: <code>{message.from_user.id}</code>")
+
+
+@router.callback_query(F.data == "invite")
+async def invite(call: CallbackQuery, bot: Bot, db: Database, settings: Settings) -> None:
+    me = await bot.me()
+    link = f"https://t.me/{me.username}?start=ref{call.from_user.id}"
+    invited, paid = await db.referral_stats(call.from_user.id)
+    await show(
+        call, texts.invite(link, invited, paid, settings.referral_days), keyboards.invite(link)
+    )
 
 
 @router.callback_query(F.data == "help")

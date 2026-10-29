@@ -160,3 +160,17 @@ def admin_users(rows: list[tuple[int, str | None, str]]) -> str:
     if not rows:
         lines.append("Пока никого.")
     return "\n".join(lines)
+
+
+def invite(link: str, invited: int, paid: int, days: int) -> str:
+    return (
+        f"{BRAND}  Пригласить друга\n\n"
+        f"Когда друг впервые оплатит подписку, вы получите {plural_days(days)} бесплатно.\n\n"
+        f"Ваша ссылка:\n<code>{link}</code>\n\n"
+        f"Пришли по ссылке: {invited}, из них оплатили: {paid}."
+    )
+
+
+def referral_reward(days: int, sub: Subscription) -> str:
+    when = "бессрочно" if sub.expire == 0 else f"до {fmt_date(sub.expire)}"
+    return f"{BRAND}\n\nВаш друг оплатил подписку. Дарим {plural_days(days)}, теперь доступ {when}."
