@@ -15,6 +15,8 @@ from bot.texts import plural_days
 
 async def main() -> None:
     logging.basicConfig(level=logging.INFO)
+    # httpx пишет в лог полный адрес панели вместе с секретным путём
+    logging.getLogger("httpx").setLevel(logging.WARNING)
     settings = Settings()
     db = Database(settings.db_path)
     await db.init()
