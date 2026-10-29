@@ -90,7 +90,10 @@ def admin() -> InlineKeyboardMarkup:
             InlineKeyboardButton(text="Выдать доступ", callback_data="admin:give"),
             InlineKeyboardButton(text="Забрать", callback_data="admin:take"),
         ],
-        [InlineKeyboardButton(text="Пользователи", callback_data="admin:users")],
+        [
+            InlineKeyboardButton(text="Пользователи", callback_data="admin:users"),
+            InlineKeyboardButton(text="Промокоды", callback_data="admin:promos"),
+        ],
         [BACK],
     )
 
@@ -109,4 +112,11 @@ def invite(link: str) -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text="Отправить другу", url=share)],
         [InlineKeyboardButton(text="Скопировать ссылку", copy_text=CopyTextButton(text=link))],
         [BACK],
+    )
+
+
+def admin_promos() -> InlineKeyboardMarkup:
+    return _kb(
+        [InlineKeyboardButton(text="Создать промокод", callback_data="admin:promo")],
+        [InlineKeyboardButton(text="← Админка", callback_data="admin")],
     )

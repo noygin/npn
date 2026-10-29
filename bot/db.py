@@ -17,6 +17,17 @@ CREATE TABLE IF NOT EXISTS reminders (
     kind TEXT NOT NULL,
     PRIMARY KEY (tg_id, expire, kind)
 );
+CREATE TABLE IF NOT EXISTS promos (
+    code TEXT PRIMARY KEY,
+    days INTEGER NOT NULL,
+    uses_left INTEGER NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS promo_uses (
+    code TEXT NOT NULL,
+    tg_id INTEGER NOT NULL,
+    PRIMARY KEY (code, tg_id)
+);
 CREATE TABLE IF NOT EXISTS payments (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     tg_id INTEGER NOT NULL,
@@ -177,6 +188,47 @@ class Database:
             )
             await db.commit()
             return cur.rowcount == 1
+
+    async def save_promo(self, code: str, days: int, uses: int) -> None:
+        async with aiosqlite.connect(self.path) as db:
+            await db.execute(
+                "INSERT INTO promos (code, days, uses_left) VALUES (?, ?, ?) "
+                "ON CONFLICT(code) DO UPDATE SET days = excluded.days, uses_left = excluded.uses_left",
+                (code.upper(), days, uses),
+            )
+            await db.commit()
+
+    async def active_promos(self) -> list[tuple[str, int, int]]:
+        async with aiosqlite.connect(self.path) as db:
+            rows = await db.execute_fetchall(
+                "SELECT code, days, uses_left FROM promos WHERE uses_left > 0 ORDER BY created_at DESC"
+            )
+        return [(r[0], r[1], r[2]) for r in rows]
+
+    async def redeem_promo(self, code: str, tg_id: int) -> int | str:
+        """Списывает использование промокода. Число дней или причина отказа: missing/used."""
+        code = code.strip().upper()
+        async with aiosqlite.connect(self.path) as db:
+            row = await (
+                await db.execute(
+                    "SELECT days FROM promos WHERE code = ? AND uses_left > 0", (code,)
+                )
+            ).fetchone()
+            if row is None:
+                return "missing"
+            try:
+                await db.execute(
+                    "INSERT INTO promo_uses (code, tg_id) VALUES (?, ?)", (code, tg_id)
+                )
+            except aiosqlite.IntegrityError:
+                return "used"
+            await db.execute("UPDATE promos SET uses_left = uses_left - 1 WHERE code = ?", (code,))
+            await db.commit()
+        return row[0]
+
+    async def backup(self, dest: str) -> None:
+        async with aiosqlite.connect(self.path) as src, aiosqlite.connect(dest) as dst:
+            await src.backup(dst)
 
     async def stats(self) -> dict[str, int]:
         async with aiosqlite.connect(self.path) as db:

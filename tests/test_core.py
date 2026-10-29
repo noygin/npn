@@ -102,3 +102,12 @@ def test_parse_referrer():
     assert parse_referrer("ref123") == 123
     assert parse_referrer(None) is None
     assert parse_referrer("refx") is None and parse_referrer("123") is None
+
+
+def test_parse_promo():
+    from bot.handlers.admin import parse_promo
+
+    assert parse_promo("friends 14 50") == ("FRIENDS", 14, 50)
+    assert parse_promo("gift 7") == ("GIFT", 7, 1)
+    assert parse_promo("x 7") is None and parse_promo("gift 0") is None
+    assert parse_promo("gift seven") is None

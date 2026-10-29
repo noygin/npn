@@ -151,3 +151,20 @@ async def test_payment_extends_and_rewards_referrer(tmp_path):
     assert "tg555" in clients  # пригласивший получил дни
     await dp.feed_update(bot, upd.model_copy(update={"update_id": 3}))
     assert await db.stats() == {"users": 2, "payments": 1, "stars": 150}
+
+
+async def test_user_redeems_promo_by_sending_it(tmp_path):
+    dp, bot, session, db, clients = await make(tmp_path)
+    await db.save_promo("GIFT", 10, 5)
+    await dp.feed_update(bot, msg_update(1, "gift"))
+    assert "Промокод принят: +10 дней" in texts_sent(session)[-1]
+    assert clients["tg10"]["expiryTime"] > NOW * 1000
+    await dp.feed_update(bot, msg_update(2, "gift"))
+    assert "уже использовали" in texts_sent(session)[-1]
+
+
+async def test_admin_creates_promo(tmp_path):
+    dp, bot, _session, db, _clients = await make(tmp_path, admin=True)
+    await dp.feed_update(bot, cb_update(1, "admin:promo"))
+    await dp.feed_update(bot, msg_update(2, "spring 30 100"))
+    assert await db.active_promos() == [("SPRING", 30, 100)]

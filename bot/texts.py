@@ -77,7 +77,11 @@ def tariffs() -> str:
         months = t.days // 30
         per_month = f", {t.stars // months} ⭐ в месяц" if months > 1 else ""
         lines.append(f"{t.title}: {t.stars} ⭐{per_month}")
-    lines += ["", "Оплата звёздами Telegram. Срок добавляется к текущей подписке."]
+    lines += [
+        "",
+        "Оплата звёздами Telegram. Срок добавляется к текущей подписке.",
+        "Есть промокод? Просто отправьте его сообщением.",
+    ]
     return "\n".join(lines)
 
 
@@ -174,3 +178,32 @@ def invite(link: str, invited: int, paid: int, days: int) -> str:
 def referral_reward(days: int, sub: Subscription) -> str:
     when = "бессрочно" if sub.expire == 0 else f"до {fmt_date(sub.expire)}"
     return f"{BRAND}\n\nВаш друг оплатил подписку. Дарим {plural_days(days)}, теперь доступ {when}."
+
+
+PROMO_USED = "Этот промокод вы уже использовали."
+
+
+def promo_ok(days: int, sub: Subscription) -> str:
+    return f"Промокод принят: +{plural_days(days)}.\n\n{connect(sub)}"
+
+
+ADMIN_PROMO_HELP = (
+    f"{BRAND}  Новый промокод\n\n"
+    "Пришлите код, дни и сколько раз его можно использовать:\n"
+    "<code>FRIENDS 14 50</code>\n\n"
+    "Без последнего числа код одноразовый. Код с тем же названием перезапишется, "
+    "так можно и выключить старый: <code>FRIENDS 1 0</code>. "
+    "Люди вводят код, просто отправив его боту."
+)
+
+
+def admin_promos(promos: list[tuple[str, int, int]]) -> str:
+    lines = [f"{BRAND}  Промокоды", ""]
+    lines += [f"<code>{code}</code>: {plural_days(days)}, осталось {uses}" for code, days, uses in promos]
+    if not promos:
+        lines.append("Активных промокодов нет.")
+    return "\n".join(lines)
+
+
+def admin_promo_saved(code: str, days: int, uses: int) -> str:
+    return f"Промокод <code>{escape(code)}</code> сохранён: {plural_days(days)}, использований {uses}."

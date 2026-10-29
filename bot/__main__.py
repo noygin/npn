@@ -6,7 +6,7 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.types import BotCommand
 
-from bot import handlers, reminders
+from bot import backup, handlers, reminders
 from bot.config import Settings
 from bot.db import Database
 from bot.panel import XuiClient
@@ -39,11 +39,15 @@ async def main() -> None:
     )
     dp = Dispatcher(db=db, panel=panel, settings=settings)
     dp.include_router(handlers.setup())
-    reminders_task = asyncio.create_task(reminders.run(bot, db, panel))
+    tasks = [
+        asyncio.create_task(reminders.run(bot, db, panel)),
+        asyncio.create_task(backup.run(db)),
+    ]
     try:
         await dp.start_polling(bot)
     finally:
-        reminders_task.cancel()
+        for task in tasks:
+            task.cancel()
         await panel.close()
 
 

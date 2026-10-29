@@ -155,3 +155,33 @@ async def test_migration_adds_referral_columns(tmp_path):
     await db.init()  # повторный запуск не падает
     assert await db.register(2, "new", 1)
     assert await db.referral_stats(1) == (1, 0)
+
+
+async def test_promo_codes(tmp_path):
+    db = Database(str(tmp_path / "bot.db"))
+    await db.init()
+    await db.save_promo("friends", 14, 2)
+    assert await db.redeem_promo("Friends", 1) == 14
+    assert await db.redeem_promo("FRIENDS", 1) == "used"
+    assert await db.redeem_promo("FRIENDS", 2) == 14
+    assert await db.redeem_promo("FRIENDS", 3) == "missing"  # использования кончились
+    assert await db.redeem_promo("NOPE", 1) == "missing"
+    assert await db.active_promos() == []
+
+
+async def test_backup_keeps_a_week(tmp_path):
+    import os
+    from datetime import date, timedelta
+
+    from bot.backup import make_backup
+
+    db = Database(str(tmp_path / "bot.db"))
+    await db.init()
+    await db.upsert_user(1, "a")
+    start = date(2026, 1, 1)
+    for i in range(10):
+        await make_backup(db, start + timedelta(days=i))
+    files = sorted(os.listdir(tmp_path / "backups"))
+    assert len(files) == 7 and files[-1] == "bot-2026-01-10.db"
+    copy = Database(str(tmp_path / "backups" / files[-1]))
+    assert await copy.find_user("@a") == (1, "a")

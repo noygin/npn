@@ -1,4 +1,5 @@
 import logging
+import re
 import time
 
 import httpx
@@ -17,6 +18,7 @@ from bot.panel import PanelError, XuiClient, client_email, tg_id_from_email
 
 router = Router()
 log = logging.getLogger(__name__)
+PROMO_RE = re.compile(r"^[A-ZА-Я0-9_-]{3,32}$")
 
 
 class IsAdmin(BaseFilter):
@@ -31,6 +33,7 @@ router.callback_query.filter(IsAdmin())
 class AdminInput(StatesGroup):
     give = State()
     take = State()
+    promo = State()
 
 
 def parse_duration(word: str | None) -> int | None | bool:
@@ -141,6 +144,40 @@ async def take_input(
     message: Message, state: FSMContext, bot: Bot, db: Database, panel: XuiClient
 ) -> None:
     await answer_in_menu(message, state, bot, await take(message.text, db, panel))
+
+
+def parse_promo(args: str) -> tuple[str, int, int] | None:
+    parts = args.split()
+    if len(parts) not in (2, 3) or not parts[1].isdigit() or int(parts[1]) <= 0:
+        return None
+    if len(parts) == 3 and not parts[2].isdigit():
+        return None
+    code = parts[0].upper()
+    if not PROMO_RE.match(code):
+        return None
+    return code, int(parts[1]), int(parts[2]) if len(parts) == 3 else 1
+
+
+@router.callback_query(F.data == "admin:promos")
+async def promos(call: CallbackQuery, db: Database) -> None:
+    await show(call, texts.admin_promos(await db.active_promos()), keyboards.admin_promos())
+
+
+@router.callback_query(F.data == "admin:promo")
+async def ask_promo(call: CallbackQuery, state: FSMContext) -> None:
+    await state.set_state(AdminInput.promo)
+    await state.update_data(menu_id=call.message.message_id)
+    await show(call, texts.ADMIN_PROMO_HELP, keyboards.admin_cancel())
+
+
+@router.message(AdminInput.promo, F.text)
+async def promo_input(message: Message, state: FSMContext, bot: Bot, db: Database) -> None:
+    parsed = parse_promo(message.text)
+    if parsed is None:
+        await answer_in_menu(message, state, bot, texts.ADMIN_PROMO_HELP)
+        return
+    await db.save_promo(*parsed)
+    await answer_in_menu(message, state, bot, texts.admin_promo_saved(*parsed))
 
 
 @router.message(Command("give"))
