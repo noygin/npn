@@ -3,7 +3,7 @@ import json
 import httpx
 
 from bot.db import Database
-from bot.marzban import MarzbanClient
+from bot.panel import XuiClient
 
 
 async def test_trial_is_taken_once(tmp_path):
@@ -27,30 +27,54 @@ def fake_panel(existing: dict | None):
 
     def handler(request: httpx.Request) -> httpx.Response:
         calls.append(request)
-        if request.url.path == "/api/admin/token":
-            return httpx.Response(200, json={"access_token": "t"})
         if request.method == "GET":
-            return httpx.Response(200, json=existing) if existing else httpx.Response(404)
-        body = json.loads(request.content)
-        return httpx.Response(200, json={"subscription_url": "/sub/abc", **body})
+            if existing is None:
+                return httpx.Response(200, json={"success": False, "msg": "get (record not found)"})
+            return httpx.Response(200, json={"success": True, "obj": existing})
+        return httpx.Response(200, json={"success": True, "msg": "ok", "obj": None})
 
     return httpx.MockTransport(handler), calls
 
 
-async def test_extend_creates_missing_user():
+def make_client(transport):
+    return XuiClient(
+        "https://panel:48453/secret/", "tok", [5, 2], "https://panel:2096/sub/", transport=transport
+    )
+
+
+async def test_extend_creates_missing_client():
     transport, calls = fake_panel(None)
-    client = MarzbanClient("http://panel/", "a", "b", "VLESS TCP REALITY", transport)
-    user = await client.extend_user("tg1", 3)
+    sub = await make_client(transport).extend("tg1", 3, tg_id=1)
     create = calls[-1]
-    assert create.method == "POST" and create.headers["Authorization"] == "Bearer t"
-    assert json.loads(create.content)["inbounds"] == {"vless": ["VLESS TCP REALITY"]}
-    assert client.subscription_url(user) == "http://panel/sub/abc"
+    assert create.url.path == "/secret/panel/api/clients/add"
+    assert create.headers["Authorization"] == "Bearer tok"
+    body = json.loads(create.content)
+    assert body["inboundIds"] == [5, 2]
+    assert body["client"]["email"] == "tg1" and body["client"]["tgId"] == 1
+    assert sub.active and sub.url == f"https://panel:2096/sub/{body['client']['subId']}"
 
 
-async def test_extend_updates_existing_user():
-    transport, calls = fake_panel({"username": "tg1", "expire": 4_000_000_000})
-    client = MarzbanClient("http://panel", "a", "b", "VLESS TCP REALITY", transport)
-    await client.extend_user("tg1", 30)
+async def test_extend_keeps_client_fields_and_extends_expiry():
+    expire_ms = 4_000_000_000_000
+    existing = {
+        "client": {
+            "id": 7, "uuid": "u", "reverse": "", "email": "tg1", "subId": "s",
+            "flow": "xtls-rprx-vision", "limitIp": 2, "expiryTime": expire_ms, "enable": False,
+        },
+        "usedTraffic": 1024,
+    }
+    transport, calls = fake_panel(existing)
+    sub = await make_client(transport).extend("tg1", 30)
     update = calls[-1]
-    assert update.method == "PUT"
-    assert json.loads(update.content)["expire"] == 4_000_000_000 + 30 * 86400
+    assert update.url.path == "/secret/panel/api/clients/update/tg1"
+    body = json.loads(update.content)
+    # Поля, которые панель не сможет разобрать в model.Client, не отправляем
+    assert "id" not in body and "uuid" not in body and "reverse" not in body
+    assert body["limitIp"] == 2 and body["enable"] is True
+    assert body["expiryTime"] == expire_ms + 30 * 86400 * 1000
+    assert sub.used_traffic == 1024 and sub.url == "https://panel:2096/sub/s"
+
+
+async def test_missing_client_has_no_subscription():
+    transport, _ = fake_panel(None)
+    assert await make_client(transport).get_subscription("tg1") is None

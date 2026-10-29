@@ -7,10 +7,12 @@ class Settings(BaseSettings):
     bot_token: str
     admin_ids: list[int] = []
 
-    marzban_url: str
-    marzban_username: str
-    marzban_password: str
-    marzban_inbound: str = "VLESS TCP REALITY"
+    # Адрес панели 3x-ui вместе с webBasePath, например https://1.2.3.4:48453/secret
+    panel_url: str
+    panel_api_token: str
+    panel_inbound_ids: list[int]
+    # Начало ссылки-подписки, например https://1.2.3.4:2096/sub
+    panel_sub_url: str
 
     db_path: str = "data/bot.db"
     trial_days: int = 3

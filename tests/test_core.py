@@ -1,4 +1,4 @@
-from bot.marzban import DAY, compute_expire, marzban_username
+from bot.panel import DAY, client_email, compute_expire
 from bot.tariffs import TARIFFS
 
 
@@ -14,8 +14,8 @@ def test_expired_subscription_restarts_from_now():
     assert compute_expire(500, 1000, 30) == 1000 + 30 * DAY
 
 
-def test_marzban_username_is_valid():
-    name = marzban_username(123456789)
+def test_client_email_is_valid():
+    name = client_email(123456789)
     assert 3 <= len(name) <= 32 and name.isalnum()
 
 

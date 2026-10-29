@@ -1,5 +1,7 @@
 from datetime import datetime, timezone
 
+from bot.panel import Subscription
+
 WELCOME = (
     "Привет! Это быстрый VPN, который работает даже при блокировках.\n\n"
     "Можно попробовать бесплатно, а потом выбрать подписку."
@@ -8,8 +10,8 @@ WELCOME = (
 HELP = (
     "<b>Как подключиться</b>\n\n"
     "1. Установите приложение:\n"
-    "• Android: <a href=\"https://play.google.com/store/apps/details?id=app.hiddify.com\">Hiddify</a> или v2rayNG\n"
-    "• iPhone: Streisand или V2Box из App Store\n"
+    "• Android: Happ или Hiddify\n"
+    "• iPhone: Happ или Streisand из App Store\n"
     "• Windows и macOS: <a href=\"https://github.com/hiddify/hiddify-app/releases\">Hiddify</a>\n\n"
     "2. Скопируйте ссылку-подписку из раздела «Моя подписка».\n"
     "3. В приложении нажмите «+» и выберите импорт из буфера обмена.\n"
@@ -40,11 +42,11 @@ def fmt_bytes(n: int | None) -> str:
     return f"{n:.1f} ТБ"
 
 
-def subscription(user: dict, url: str) -> str:
-    status = "активна ✅" if user.get("status") == "active" else "не активна ❌"
+def subscription(sub: Subscription) -> str:
+    status = "активна ✅" if sub.active else "не активна ❌"
     return (
         f"<b>Подписка {status}</b>\n"
-        f"Действует до: {fmt_date(user.get('expire'))}\n"
-        f"Трафик: {fmt_bytes(user.get('used_traffic'))}\n\n"
-        f"Ссылка для приложения (нажмите, чтобы скопировать):\n<code>{url}</code>"
+        f"Действует до: {fmt_date(sub.expire)}\n"
+        f"Трафик: {fmt_bytes(sub.used_traffic)}\n\n"
+        f"Ссылка для приложения (нажмите, чтобы скопировать):\n<code>{sub.url}</code>"
     )

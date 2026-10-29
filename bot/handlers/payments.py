@@ -8,7 +8,7 @@ from bot import texts
 from bot.config import Settings
 from bot.db import Database
 from bot.keyboards import back_menu
-from bot.marzban import MarzbanClient, marzban_username
+from bot.panel import PanelError, XuiClient, client_email
 from bot.tariffs import TARIFFS
 
 router = Router()
@@ -40,7 +40,7 @@ async def pre_checkout(query: PreCheckoutQuery) -> None:
 
 @router.message(F.successful_payment)
 async def successful_payment(
-    message: Message, bot: Bot, db: Database, marzban: MarzbanClient, settings: Settings
+    message: Message, bot: Bot, db: Database, panel: XuiClient, settings: Settings
 ) -> None:
     payment = message.successful_payment
     tariff = TARIFFS[payment.invoice_payload]
@@ -52,8 +52,8 @@ async def successful_payment(
     ):
         return  # повторная доставка уже обработанного платежа
     try:
-        user = await marzban.extend_user(marzban_username(tg_id), tariff.days)
-    except httpx.HTTPError:
+        sub = await panel.extend(client_email(tg_id), tariff.days, tg_id)
+    except (httpx.HTTPError, PanelError):
         log.exception("extend after payment failed for %s", tg_id)
         await message.answer(texts.PAYMENT_ERROR)
         for admin_id in settings.admin_ids:
@@ -64,6 +64,6 @@ async def successful_payment(
             )
         return
     await message.answer(
-        "Спасибо за оплату! 🎉\n\n" + texts.subscription(user, marzban.subscription_url(user)),
+        "Спасибо за оплату! 🎉\n\n" + texts.subscription(sub),
         reply_markup=back_menu(),
     )

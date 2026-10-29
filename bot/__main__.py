@@ -8,7 +8,7 @@ from aiogram.enums import ParseMode
 from bot import handlers
 from bot.config import Settings
 from bot.db import Database
-from bot.marzban import MarzbanClient
+from bot.panel import XuiClient
 
 
 async def main() -> None:
@@ -16,19 +16,19 @@ async def main() -> None:
     settings = Settings()
     db = Database(settings.db_path)
     await db.init()
-    marzban = MarzbanClient(
-        settings.marzban_url,
-        settings.marzban_username,
-        settings.marzban_password,
-        settings.marzban_inbound,
+    panel = XuiClient(
+        settings.panel_url,
+        settings.panel_api_token,
+        settings.panel_inbound_ids,
+        settings.panel_sub_url,
     )
     bot = Bot(settings.bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
-    dp = Dispatcher(db=db, marzban=marzban, settings=settings)
+    dp = Dispatcher(db=db, panel=panel, settings=settings)
     dp.include_router(handlers.setup())
     try:
         await dp.start_polling(bot)
     finally:
-        await marzban.close()
+        await panel.close()
 
 
 if __name__ == "__main__":

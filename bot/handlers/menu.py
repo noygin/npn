@@ -9,7 +9,7 @@ from bot import texts
 from bot.config import Settings
 from bot.db import Database
 from bot.keyboards import back_menu, main_menu, tariffs_menu
-from bot.marzban import MarzbanClient, marzban_username
+from bot.panel import PanelError, XuiClient, client_email
 
 router = Router()
 log = logging.getLogger(__name__)
@@ -43,38 +43,36 @@ async def buy(call: CallbackQuery) -> None:
 
 
 @router.callback_query(F.data == "trial")
-async def trial(call: CallbackQuery, db: Database, marzban: MarzbanClient, settings: Settings) -> None:
+async def trial(call: CallbackQuery, db: Database, panel: XuiClient, settings: Settings) -> None:
     await db.upsert_user(call.from_user.id, call.from_user.username)
     if not await db.take_trial(call.from_user.id):
         await call.answer(texts.TRIAL_USED, show_alert=True)
         return
     try:
-        user = await marzban.extend_user(marzban_username(call.from_user.id), settings.trial_days)
-    except httpx.HTTPError:
+        sub = await panel.extend(
+            client_email(call.from_user.id), settings.trial_days, call.from_user.id
+        )
+    except (httpx.HTTPError, PanelError):
         log.exception("trial failed for %s", call.from_user.id)
         await call.answer(texts.PANEL_ERROR, show_alert=True)
         return
     await call.message.answer(
-        texts.subscription(user, marzban.subscription_url(user)), reply_markup=back_menu()
+        texts.subscription(sub), reply_markup=back_menu()
     )
     await call.answer()
 
 
 @router.message(Command("my"))
 @router.callback_query(F.data == "my")
-async def my(event: Message | CallbackQuery, marzban: MarzbanClient) -> None:
+async def my(event: Message | CallbackQuery, panel: XuiClient) -> None:
     message = event.message if isinstance(event, CallbackQuery) else event
     try:
-        user = await marzban.get_user(marzban_username(event.from_user.id))
-    except httpx.HTTPError:
+        sub = await panel.get_subscription(client_email(event.from_user.id))
+    except (httpx.HTTPError, PanelError):
         log.exception("get_user failed for %s", event.from_user.id)
         text = texts.PANEL_ERROR
     else:
-        text = (
-            texts.subscription(user, marzban.subscription_url(user))
-            if user is not None
-            else texts.NO_SUBSCRIPTION
-        )
+        text = texts.subscription(sub) if sub is not None else texts.NO_SUBSCRIPTION
     await message.answer(text, reply_markup=back_menu())
     if isinstance(event, CallbackQuery):
         await event.answer()

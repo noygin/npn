@@ -1,39 +1,30 @@
 # Развёртывание
 
-## 1. Сервер
+Бот работает с панелью [3x-ui](https://github.com/MHSanaei/3x-ui) версии 3 и ходит в её API по Bearer-токену.
 
-Купите VPS (Ubuntu 22.04 или 24.04, от 1 ГБ RAM) в Нидерландах или Финляндии. Хостеры, которые принимают рубли или крипту: Aeza, PQ.Hosting, VDSina; из зарубежных Hetzner и DigitalOcean.
+## 1. Панель
 
-## 2. Marzban
-
-```bash
-sudo bash -c "$(curl -sL https://github.com/Gozargah/Marzban-scripts/raw/master/marzban.sh)" @ install
-marzban cli admin create --sudo
-```
-
-Панель слушает `127.0.0.1:8000`. Наружу её не открывайте, заходите через SSH-туннель:
-`ssh -L 8000:127.0.0.1:8000 root@SERVER`, затем http://127.0.0.1:8000/dashboard.
-
-## 3. Reality
-
-Сгенерируйте ключи:
+Если 3x-ui ещё нет:
 
 ```bash
-docker exec marzban-marzban-1 xray x25519   # Private key и Public key
-openssl rand -hex 8                          # shortId
+bash <(curl -Ls https://raw.githubusercontent.com/mhsanaei/3x-ui/master/install.sh)
 ```
 
-Скопируйте [xray_config.json](xray_config.json) в `/var/lib/marzban/xray_config.json`, подставьте `PRIVATE_KEY` и `SHORT_ID`, затем `marzban restart`.
+В панели создайте inbound:
+- **VLESS Reality** на TCP 443. Для SNI лучше свой домен (Self SNI): чужие популярные SNI вроде www.apple.com у части провайдеров в РФ уже режутся.
+- **Hysteria2** на UDP, например 8443, можно второй с obfs salamander.
 
-Сайт в `dest` и `serverNames` должен открываться из РФ без VPN, поддерживать TLS 1.3 и HTTP/2. Лучше подобрать сайт в той же сети, что и сервер, с помощью [RealiTLScanner](https://github.com/XTLS/RealiTLScanner).
+Запишите их ID: они видны в списке inbound или в адресе при редактировании.
 
-Чтобы ссылки-подписки были полными, в `/opt/marzban/.env` задайте
-`XRAY_SUBSCRIPTION_URL_PREFIX=https://ваш-домен` (нужен домен и HTTPS).
+## 2. Доступ для бота
 
-## 4. Бот
+1. В панели: **Настройки → API Tokens → создать**. Токен показывается один раз.
+2. Подписка должна быть включена (по умолчанию порт 2096, путь `/sub/`).
+
+## 3. Бот
 
 1. Создайте бота у @BotFather и получите токен.
-2. На том же сервере:
+2. На сервере с панелью:
 
 ```bash
 git clone https://github.com/noygin/npn && cd npn
@@ -41,4 +32,10 @@ cp .env.example .env && nano .env
 docker compose up -d --build
 ```
 
-3. Проверьте `/start` в боте и `/stats` от админа.
+В `.env`:
+- `PANEL_URL` — адрес панели вместе с webBasePath, как в браузере, но без `/panel/...`;
+- `PANEL_API_TOKEN` — токен из шага 2;
+- `PANEL_INBOUND_IDS` — ID inbound через запятую в скобках, например `[5,2,6]`;
+- `PANEL_SUB_URL` — например `https://IP:2096/sub`.
+
+3. Проверьте `/start` в боте и `/stats` от админа. Каждый пользователь бота появится в панели как клиент `tg<telegram id>` на всех указанных inbound.
