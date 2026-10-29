@@ -1,0 +1,7 @@
+[Unit]
+Description=Update npn bot from GitHub
+After=network-online.target docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/npn/deploy/autoupdate.sh
