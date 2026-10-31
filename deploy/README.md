@@ -51,3 +51,7 @@ systemctl enable --now npn-autoupdate.timer
 ```
 
 Лог обновлений: `journalctl -u npn-autoupdate -n 50`. Репозиторий должен быть публичным, либо на сервере нужен deploy key с доступом на чтение.
+
+## 5. OpenVPN-файлы AntiZapret
+
+В админке бота есть кнопка «OpenVPN-файл на 3 дня» и команда `/ovpn <дней>`. Бот кладёт заявку в `data/ovpn/requests/`, а `deploy/ovpn-helper.sh` (его запускает `autoupdate.sh` от root раз в 2 минуты) выпускает клиента через `/root/antizapret/client.sh 1 <имя> <дней>`. Сертификат действует указанное число дней, после этого OpenVPN его не примет. Готовые `.ovpn` бот присылает админу в Telegram.

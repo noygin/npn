@@ -207,3 +207,30 @@ def admin_promos(promos: list[tuple[str, int, int]]) -> str:
 
 def admin_promo_saved(code: str, days: int, uses: int) -> str:
     return f"Промокод <code>{escape(code)}</code> сохранён: {plural_days(days)}, использований {uses}."
+
+
+def ovpn_wait(days: int) -> str:
+    return (
+        f"Готовлю OpenVPN-файл на {plural_days(days)}. Сервер подхватит заявку в течение "
+        "двух минут, пришлю файл сюда."
+    )
+
+
+def ovpn_ready(days: int, until: int) -> str:
+    return (
+        f"{BRAND}  OpenVPN на {plural_days(days)}, работает до {fmt_date(until)}\n\n"
+        "Файл <b>antizapret</b> пускает через VPN только заблокированные сайты, "
+        "<b>vpn</b> гонит через VPN весь трафик. Откройте любой в приложении "
+        "OpenVPN Connect или AmneziaVPN."
+    )
+
+
+def ovpn_failed(error: str) -> str:
+    return f"Не получилось выпустить OpenVPN-файл.\n\n<pre>{escape(error[-3000:])}</pre>"
+
+
+OVPN_TIMEOUT = (
+    "Сервер не ответил за 6 минут. Скорее всего, автообновление на нём ещё не подтянуло "
+    "новую версию. Попробуйте ещё раз через пару минут."
+)
+OVPN_HELP = "Срок в днях от 1 до 365, например <code>/ovpn 3</code>. Без числа будет 3 дня."

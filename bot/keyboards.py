@@ -94,6 +94,7 @@ def admin() -> InlineKeyboardMarkup:
             InlineKeyboardButton(text="Пользователи", callback_data="admin:users"),
             InlineKeyboardButton(text="Промокоды", callback_data="admin:promos"),
         ],
+        [InlineKeyboardButton(text="OpenVPN-файл на 3 дня", callback_data="admin:ovpn")],
         [BACK],
     )
 

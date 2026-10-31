@@ -1,6 +1,8 @@
+import asyncio
 import logging
 import re
 import time
+from pathlib import Path
 
 import httpx
 from aiogram import Bot, F, Router
@@ -8,9 +10,9 @@ from aiogram.exceptions import TelegramAPIError, TelegramBadRequest
 from aiogram.filters import BaseFilter, Command, CommandObject
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import CallbackQuery, Message, TelegramObject
+from aiogram.types import CallbackQuery, FSInputFile, Message, TelegramObject
 
-from bot import keyboards, texts
+from bot import keyboards, ovpn, texts
 from bot.config import Settings
 from bot.db import Database
 from bot.handlers.menu import show
@@ -224,3 +226,51 @@ async def users(call: CallbackQuery, db: Database, panel: XuiClient) -> None:
             status = f"до {texts.fmt_date(c['expiryTime'] // 1000)}"
         rows.append((tg_id, username, status))
     await show(call, texts.admin_users(rows), keyboards.admin_back())
+
+
+_ovpn_tasks: set[asyncio.Task] = set()
+
+
+async def deliver_ovpn(bot: Bot, chat_id: int, base: Path, name: str, days: int) -> None:
+    try:
+        result = await ovpn.wait(base, name)
+        if result is None:
+            await bot.send_message(chat_id, texts.OVPN_TIMEOUT)
+        elif not result.ok:
+            await bot.send_message(chat_id, texts.ovpn_failed(result.error))
+        else:
+            until = int(time.time()) + days * 86400
+            await bot.send_message(chat_id, texts.ovpn_ready(days, until))
+            for f in result.files:
+                await bot.send_document(chat_id, FSInputFile(f))
+    except Exception:
+        log.exception("ovpn delivery failed")
+        await bot.send_message(chat_id, texts.ovpn_failed("ошибка в боте, подробности в логе"))
+    finally:
+        ovpn.cleanup(base, name)
+
+
+async def start_ovpn(message: Message, bot: Bot, settings: Settings, days: int) -> None:
+    base, name = Path(settings.ovpn_dir), ovpn.client_name(days)
+    ovpn.submit(base, name, days)
+    await message.answer(texts.ovpn_wait(days))
+    task = asyncio.create_task(deliver_ovpn(bot, message.chat.id, base, name, days))
+    _ovpn_tasks.add(task)
+    task.add_done_callback(_ovpn_tasks.discard)
+
+
+@router.callback_query(F.data == "admin:ovpn")
+async def ovpn_button(call: CallbackQuery, bot: Bot, settings: Settings) -> None:
+    await call.answer()
+    await start_ovpn(call.message, bot, settings, 3)
+
+
+@router.message(Command("ovpn"))
+async def ovpn_command(
+    message: Message, command: CommandObject, bot: Bot, settings: Settings
+) -> None:
+    word = (command.args or "3").strip()
+    if not word.isdigit() or not 1 <= int(word) <= 365:
+        await message.answer(texts.OVPN_HELP)
+        return
+    await start_ovpn(message, bot, settings, int(word))
