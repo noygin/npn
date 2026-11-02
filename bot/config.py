@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     greetings: dict[str, list[str]] = {}
     # Пользователи с бесплатной бессрочной подпиской, username без @
     free_users: list[str] = []
+    # Общая с хостом папка для заявок на OpenVPN-профили (см. deploy/ovpn-helper.sh)
+    ovpn_dir: str = "data/ovpn"
 
     def is_free(self, username: str | None) -> bool:
         return bool(username) and username.lower() in {

@@ -8,6 +8,12 @@ BRANCH="${BRANCH:-main}"
 SRC=/opt/npn-src
 APP=/opt/npn
 
+# Заявки бота на OpenVPN-профили обрабатываем до проверки GitHub,
+# чтобы они не зависели от сети и от наличия обновлений
+if [ -f "$APP/deploy/ovpn-helper.sh" ]; then
+    bash "$APP/deploy/ovpn-helper.sh" || echo "ovpn helper failed"
+fi
+
 if [ ! -d "$SRC/.git" ]; then
     git clone -q --branch "$BRANCH" "$REPO_URL" "$SRC"
     rm -f "$SRC/.deployed"

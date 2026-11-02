@@ -168,3 +168,30 @@ async def test_admin_creates_promo(tmp_path):
     await dp.feed_update(bot, cb_update(1, "admin:promo"))
     await dp.feed_update(bot, msg_update(2, "spring 30 100"))
     assert await db.active_promos() == [("SPRING", 30, 100)]
+
+
+async def test_admin_ovpn_command(tmp_path, monkeypatch):
+    dp, bot, session, _db, _clients = await make(tmp_path, admin=True)
+    from bot.handlers import admin as admin_h
+    base = tmp_path / "ovpn"
+    monkeypatch.setattr(admin_h.ovpn, "WAIT_SECONDS", 0.3)
+    dp["settings"].ovpn_dir = str(base)
+    await dp.feed_update(bot, msg_update(1, "/ovpn 3"))
+    assert "Готовлю OpenVPN-файл на 3 дня" in texts_sent(session)[-1]
+    assert len(list((base / "requests").glob("*.req"))) == 1
+    await dp.feed_update(bot, msg_update(2, "/ovpn abc"))
+    assert "Срок в днях" in texts_sent(session)[-1]
+
+
+async def test_admin_ovpn_delivers_files(tmp_path):
+    _dp, bot, session, _db, _clients = await make(tmp_path, admin=True)
+    from bot.handlers import admin as admin_h
+    done = tmp_path / "done" / "n1"
+    done.mkdir(parents=True)
+    (done / "antizapret-n1-(1.2.3.4).ovpn").write_text("x")
+    (done / "status").write_text("ok\n")
+    await admin_h.deliver_ovpn(bot, 10, tmp_path, "n1", 3)
+    names = [type(c).__name__ for c in session.calls]
+    assert names == ["SendMessage", "SendDocument"]
+    assert "работает до" in session.calls[0].text
+    assert not done.exists()
