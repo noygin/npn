@@ -232,7 +232,7 @@ def create_app(
     async def login(request: Request):
         if await current_user(request):
             return go("/cabinet")
-        code = await store.new_login_code()
+        code = await store.new_login_code(base_url(request))
         bot = state["bot_username"]
         link = f"https://t.me/{bot}?start=login_{code}" if bot else ""
         return render(request, "login.html", code=code, link=link)

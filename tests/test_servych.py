@@ -228,9 +228,11 @@ async def test_bot_confirms_site_login(tmp_path):
     dp["settings"].servych_db_path = str(tmp_path / "servych.db")
     store = Store(str(tmp_path / "servych.db"))
     await store.init()
-    code = await store.new_login_code()
+    code = await store.new_login_code("http://1.2.3.4:8088")
     await dp.feed_update(bot, msg_update(1, f"/start login_{code}"))
     assert "вы вошли на сайт" in texts_sent(session)[-1]
+    button = session.calls[-1].reply_markup.inline_keyboard[0][0]
+    assert button.url == f"http://1.2.3.4:8088/login/finish/{code}"
     assert await store.login_owner(code) == 10
     # Второй раз тот же код не подходит
     await dp.feed_update(bot, msg_update(2, f"/start login_{code}"))
@@ -269,3 +271,15 @@ def test_stars_payment_through_bot(tmp_path):
     assert asyncio.run(world.store.server_of(OWNER))["paid_until"] is not None
     page = owner.get("/pay/1").text
     assert "Оплачено" in page and "1420 ⭐" in page
+
+
+async def test_old_database_gets_site_column(tmp_path):
+    import aiosqlite
+    path = str(tmp_path / "old.db")
+    async with aiosqlite.connect(path) as db:
+        await db.execute("CREATE TABLE login_codes (code TEXT PRIMARY KEY, tg_id INTEGER, created_at INTEGER NOT NULL)")
+        await db.commit()
+    store = Store(path)
+    await store.init()
+    code = await store.new_login_code("http://site")
+    assert await store.confirm_login(code, 1, "u", "U") == "http://site"

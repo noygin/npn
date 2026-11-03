@@ -26,6 +26,8 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS login_codes (
     code TEXT PRIMARY KEY,
     tg_id INTEGER,
+    -- адрес сайта, с которого начали вход: бот даёт на него кнопку возврата
+    site TEXT NOT NULL DEFAULT '',
     created_at INTEGER NOT NULL
 );
 CREATE TABLE IF NOT EXISTS sessions (
@@ -123,28 +125,37 @@ class Store:
             # Сайт и бот пишут в базу из разных процессов
             await db.execute("PRAGMA journal_mode=WAL")
             await db.executescript(SCHEMA)
+            # Миграция для баз, созданных до появления колонки
+            columns = {r[1] for r in await db.execute_fetchall("PRAGMA table_info(login_codes)")}
+            if "site" not in columns:
+                await db.execute("ALTER TABLE login_codes ADD COLUMN site TEXT NOT NULL DEFAULT ''")
             await db.commit()
 
     # Вход через Telegram
 
-    async def new_login_code(self) -> str:
+    async def new_login_code(self, site: str = "") -> str:
         code = secrets.token_urlsafe(18)
         await self._execute(
-            "INSERT INTO login_codes (code, created_at) VALUES (?, ?)", (code, now())
+            "INSERT INTO login_codes (code, site, created_at) VALUES (?, ?, ?)", (code, site, now())
         )
         return code
 
     async def confirm_login(
         self, code: str, tg_id: int, username: str | None, name: str | None
-    ) -> bool:
-        """Бот вызывает это, когда человек нажал «Старт» по ссылке входа."""
+    ) -> str | None:
+        """Бот вызывает это, когда человек нажал «Старт» по ссылке входа.
+
+        Возвращает адрес сайта, с которого начали вход, или None, если код не подошёл.
+        """
         changed = await self._execute(
             "UPDATE login_codes SET tg_id = ? WHERE code = ? AND tg_id IS NULL AND created_at > ?",
             (tg_id, code, now() - LOGIN_TTL),
         )
-        if changed:
-            await self.upsert_user(tg_id, username, name)
-        return bool(changed)
+        if not changed:
+            return None
+        await self.upsert_user(tg_id, username, name)
+        row = await self._fetchone("SELECT site FROM login_codes WHERE code = ?", (code,))
+        return row["site"]
 
     async def login_owner(self, code: str) -> int | None:
         row = await self._fetchone(
