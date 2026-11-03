@@ -9,7 +9,7 @@ from aiogram.types import ErrorEvent, Message
 from bot import keyboards, texts
 from bot.config import Settings
 from bot.db import Database
-from bot.handlers import admin, menu, payments, servych_login
+from bot.handlers import admin, menu, payments, servych_login, servych_pay
 from bot.panel import PanelError, XuiClient, client_email
 
 log = logging.getLogger(__name__)
@@ -60,5 +60,5 @@ async def on_error(event: ErrorEvent) -> None:
 
 def setup() -> Router:
     router = Router()
-    router.include_routers(servych_login.router, menu.router, payments.router, admin.router, fallback)
+    router.include_routers(servych_login.router, servych_pay.router, menu.router, payments.router, admin.router, fallback)
     return router

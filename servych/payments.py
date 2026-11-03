@@ -84,8 +84,40 @@ class CryptoBot:
         await self._http.aclose()
 
 
+class Stars:
+    """Счёт в Telegram Stars. Оплату принимает бот и сам отмечает её в базе сайта."""
+
+    code = "stars"
+    title = "Telegram Stars"
+    payload_prefix = "servych:"
+
+    def __init__(self, bot_token: str, monthly: int, transport: httpx.AsyncBaseTransport | None = None):
+        self.hint = f"{monthly} ⭐ в месяц, оплата прямо в Telegram"
+        self._http = httpx.AsyncClient(
+            base_url=f"https://api.telegram.org/bot{bot_token}", timeout=15, transport=transport
+        )
+
+    async def create(self, payment_id: int, amount: int, description: str, return_url: str) -> Invoice:
+        r = await self._http.post("/createInvoiceLink", json={
+            "title": "Сервыч",
+            "description": description,
+            "payload": f"{self.payload_prefix}{payment_id}",
+            "currency": "XTR",
+            "prices": [{"label": description, "amount": amount}],
+        })
+        data = r.json()
+        if not data.get("ok"):
+            raise PaymentError(str(data.get("description")))
+        return Invoice("", data["result"])
+
+    async def close(self) -> None:
+        await self._http.aclose()
+
+
 def available_methods(settings: Settings, transport: httpx.AsyncBaseTransport | None = None) -> dict:
     methods = {}
+    if settings.bot_token:
+        methods[Stars.code] = Stars(settings.bot_token, settings.servych_price_stars, transport)
     if settings.cryptobot_token:
         methods[CryptoBot.code] = CryptoBot(
             settings.cryptobot_token, settings.cryptobot_api, transport

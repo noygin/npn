@@ -82,8 +82,8 @@ async def make(tmp_path, admin=False):
     bot = Bot("1:x", session=session, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     dp = Dispatcher(db=db, panel=panel, settings=settings)
     # Роутеры модульные, отцепляем их от диспетчера прошлого теста
-    for r in (handlers.servych_login.router, handlers.menu.router, handlers.payments.router,
-              handlers.admin.router, handlers.fallback):
+    for r in (handlers.servych_login.router, handlers.servych_pay.router, handlers.menu.router,
+              handlers.payments.router, handlers.admin.router, handlers.fallback):
         r._parent_router = None
     dp.include_router(handlers.setup())
     return dp, bot, session, db, clients
