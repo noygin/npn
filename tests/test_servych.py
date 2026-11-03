@@ -243,22 +243,22 @@ def test_stars_payment_through_bot(tmp_path):
     world = World(tmp_path)
     owner = world.client(OWNER)
     owner.post("/order")
-    assert "500 ⭐ в месяц" in owner.get("/pay").text
+    assert "760 ⭐ в месяц" in owner.get("/pay").text
     page = owner.post("/pay", data={"months": "3", "method": "stars"}).text
-    assert "https://t.me/$stars1" in page and "1420 ⭐" in page
+    assert "https://t.me/$stars1" in page and "2170 ⭐" in page
     [invoice] = world.stars
     assert invoice["currency"] == "XTR" and invoice["payload"] == "servych:1"
-    assert invoice["prices"][0]["amount"] == 1420
+    assert invoice["prices"][0]["amount"] == 2170
 
     # Платёж приходит боту: он подтверждает счёт и отмечает оплату в базе сайта
     async def bot_side():
         dp, bot, session, _db, _clients = await make(tmp_path)
         dp["settings"].servych_db_path = world.settings.servych_db_path
-        checkout = {"id": "q1", "from": USER, "currency": "XTR", "total_amount": 1420,
+        checkout = {"id": "q1", "from": USER, "currency": "XTR", "total_amount": 2170,
                     "invoice_payload": "servych:1"}
         await dp.feed_update(bot, Update.model_validate({"update_id": 1, "pre_checkout_query": checkout}))
         assert session.calls[-1].ok is True
-        paid = {"currency": "XTR", "total_amount": 1420, "invoice_payload": "servych:1",
+        paid = {"currency": "XTR", "total_amount": 2170, "invoice_payload": "servych:1",
                 "telegram_payment_charge_id": "ch1", "provider_payment_charge_id": ""}
         await dp.feed_update(bot, Update.model_validate({"update_id": 2, "message": {
             "message_id": 2, "date": NOW, "chat": CHAT, "from": USER, "successful_payment": paid}}))
@@ -270,7 +270,7 @@ def test_stars_payment_through_bot(tmp_path):
     asyncio.run(bot_side())
     assert asyncio.run(world.store.server_of(OWNER))["paid_until"] is not None
     page = owner.get("/pay/1").text
-    assert "Оплачено" in page and "1420 ⭐" in page
+    assert "Оплачено" in page and "2170 ⭐" in page
 
 
 async def test_old_database_gets_site_column(tmp_path):
