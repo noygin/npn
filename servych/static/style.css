@@ -1,12 +1,5 @@
 /* Сервыч: гжельский кобальт, белая эмаль и тёплый свет в окнах */
 
-@font-face { font-family: "Unbounded"; font-weight: 500 800; font-display: swap; src: url(fonts/unbounded-cyr.woff2) format("woff2"); unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
-@font-face { font-family: "Unbounded"; font-weight: 500 800; font-display: swap; src: url(fonts/unbounded-lat.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2212, U+FEFF, U+FFFD; }
-@font-face { font-family: "Unbounded"; font-weight: 500 800; font-display: swap; src: url(fonts/unbounded-latext.woff2) format("woff2"); unicode-range: U+20BD; }
-@font-face { font-family: "Golos Text"; font-weight: 400 700; font-display: swap; src: url(fonts/golos-cyr.woff2) format("woff2"); unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
-@font-face { font-family: "Golos Text"; font-weight: 400 700; font-display: swap; src: url(fonts/golos-lat.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2212, U+FEFF, U+FFFD; }
-@font-face { font-family: "Golos Text"; font-weight: 400 700; font-display: swap; src: url(fonts/golos-latext.woff2) format("woff2"); unicode-range: U+20BD; }
-
 :root {
   --bg: #f4f6fb;
   --card: #ffffff;
@@ -24,8 +17,9 @@
   --bad: #b3261e;
   --bad-soft: #fbe4e1;
   --radius: 20px;
-  --display: "Unbounded", "Golos Text", system-ui, sans-serif;
-  --text: "Golos Text", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  /* Helvetica Neue есть на iPhone и Mac, остальные увидят Arial или системный шрифт */
+  --display: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --text: "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -46,6 +40,8 @@
 }
 
 * { box-sizing: border-box; }
+/* Атрибут hidden должен прятать и элементы с display из классов, например .row */
+[hidden] { display: none !important; }
 html { -webkit-text-size-adjust: 100%; }
 body {
   margin: 0;
