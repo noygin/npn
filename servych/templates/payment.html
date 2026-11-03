@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Оплата — Сервыч{% endblock %}
+{% block wrapclass %}narrow{% endblock %}
+{% block content %}
+<div class="card stack" style="text-align:center;padding:32px 22px">
+  {% if payment.status == 'paid' %}
+    <div class="icon" style="font-size:48px">🎉</div>
+    <h1 style="font-size:28px">Оплачено, спасибо!</h1>
+    <p class="muted">{{ plan.title if plan else '' }} за {{ payment.amount }} ₽.</p>
+    <a class="btn big block" href="/cabinet">К моему серверу</a>
+  {% elif payment.method == 'support' %}
+    <h1 style="font-size:28px">Заказ №{{ payment.id }}</h1>
+    <p class="muted">{{ plan.title if plan else '' }} за {{ payment.amount }} ₽. Напишите нам в Telegram номер заказа, и мы пришлём, как удобнее оплатить. Обычно отвечаем в течение часа.</p>
+    {% if support %}
+      <a class="btn big block" href="https://t.me/{{ support }}?text={{ ('Здравствуйте! Хочу оплатить заказ №' ~ payment.id)|urlencode }}">Написать в Telegram</a>
+    {% endif %}
+    <a class="btn block ghost" href="/cabinet">К моему серверу</a>
+  {% else %}
+    <h1 style="font-size:28px">Ждём оплату</h1>
+    <p class="muted">{{ plan.title if plan else '' }} за {{ payment.amount }} ₽. Если вы уже оплатили, нажмите «Проверить».</p>
+    <a class="btn big block" href="/pay/{{ payment.id }}">Проверить</a>
+    {% if payment.pay_url %}<a class="btn block ghost" href="{{ payment.pay_url }}">Открыть счёт ещё раз</a>{% endif %}
+  {% endif %}
+</div>
+{% endblock %}

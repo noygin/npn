@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Сервыч — свой VPN для всей семьи{% endblock %}</title>
+  <meta name="description" content="Отдельный VPN-сервер только для ваших близких. Мы всё настроим, вам останется нажать одну кнопку.">
+  <link rel="icon" href="/static/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="wrap {% block wrapclass %}{% endblock %}">
+    <header class="top">
+      <a class="logo" href="/">
+        <img src="/static/logo.svg" alt="" width="34" height="34">
+        Сервыч
+      </a>
+      {% block nav %}
+      <nav class="top-actions">
+        {% if user %}
+          {% if is_admin %}<a class="btn small ghost" href="/admin">Админка</a>{% endif %}
+          <a class="btn small soft" href="/cabinet">Мой сервер</a>
+        {% else %}
+          <a class="btn small soft" href="/login">Войти</a>
+        {% endif %}
+      </nav>
+      {% endblock %}
+    </header>
+    {% if message %}<div class="notice" role="status">{{ message }}</div>{% endif %}
+    {% block content %}{% endblock %}
+    <footer>
+      {% block footer %}
+      <div class="row spread wrap-row">
+        <span>© Сервыч</span>
+        <span>
+          {% if support %}<a href="https://t.me/{{ support }}">Поддержка в Telegram</a>{% endif %}
+          {% if user %}
+            <form method="post" action="/logout" style="display:inline;margin-left:16px">
+              <button class="linkbtn">Выйти</button>
+            </form>
+          {% endif %}
+        </span>
+      </div>
+      {% endblock %}
+    </footer>
+  </div>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

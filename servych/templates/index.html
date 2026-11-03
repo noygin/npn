@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+  <div>
+    <h1>Свой VPN для всей семьи</h1>
+    <p class="lead">Отдельный сервер только для ваших близких. Мы всё настроим, а вам останется нажать одну кнопку.</p>
+    <div class="cta">
+      <a class="btn big" href="{{ '/cabinet' if user else '/login' }}">{{ 'Открыть мой сервер' if user else 'Начать' }}</a>
+      <span class="price-note">{{ price }} ₽ в месяц за всю семью</span>
+    </div>
+  </div>
+  <div class="phone" aria-hidden="true">
+    <div class="row spread" style="margin-bottom:14px">
+      <strong>Ваш сервер</strong>
+      <span class="status on">Включён</span>
+    </div>
+    <ul class="people">
+      <li class="person"><span class="avatar">М</span><span class="grow"><span class="name">Мама</span><br><span class="muted small">2,4 ГБ</span></span></li>
+      <li class="person"><span class="avatar">П</span><span class="grow"><span class="name">Папа</span><br><span class="muted small">860 МБ</span></span></li>
+      <li class="person"><span class="avatar">А</span><span class="grow"><span class="name">Аня, планшет</span><br><span class="muted small">5,1 ГБ</span></span></li>
+    </ul>
+    <div class="btn block soft" style="margin-top:12px">+ Добавить человека</div>
+  </div>
+</section>
+
+<section class="section">
+  <h2>Как это работает</h2>
+  <div class="grid three" style="margin-top:20px">
+    <div class="card">
+      <div class="step-num">1</div>
+      <h3>Заказываете сервер</h3>
+      <p class="muted">Входите через Telegram и оплачиваете. Это занимает пару минут, пароль придумывать не нужно.</p>
+    </div>
+    <div class="card">
+      <div class="step-num">2</div>
+      <h3>Мы его настраиваем</h3>
+      <p class="muted">Арендуем сервер в Европе и ставим на него всё нужное. Обычно в течение дня, мы напишем, когда готово.</p>
+    </div>
+    <div class="card">
+      <div class="step-num">3</div>
+      <h3>Добавляете близких</h3>
+      <p class="muted">Каждому отправляете ссылку. Человек ставит приложение, нажимает одну кнопку, и всё работает.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <h2>Почему свой сервер лучше общего VPN</h2>
+  <div class="grid two" style="margin-top:20px">
+    <div class="card">
+      <div class="icon">🏠</div>
+      <h3>Только ваши люди</h3>
+      <p class="muted">На сервере нет посторонних, поэтому он не тормозит по вечерам, когда все сидят в интернете.</p>
+    </div>
+    <div class="card">
+      <div class="icon">🛡️</div>
+      <h3>Работает стабильнее</h3>
+      <p class="muted">На общих VPN тысячи людей, и их адреса замечают быстро. На вашем сервере всего несколько человек.</p>
+    </div>
+    <div class="card">
+      <div class="icon">🔧</div>
+      <h3>Чиним за минуты</h3>
+      <p class="muted">Если что-то перестало открываться, нажмите «Не работает». Мы бесплатно сменим адрес сервера, а приложения подхватят его сами.</p>
+    </div>
+    <div class="card">
+      <div class="icon">👨‍👩‍👧</div>
+      <h3>Один платёж за всех</h3>
+      <p class="muted">Подключайте телефоны, планшеты и компьютеры всей семьи. Выходит дешевле, чем покупать подписку каждому.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="price">
+  <div class="card price-card">
+    <h2>Сколько стоит</h2>
+    <div class="price">{{ price }} ₽ <small>в месяц</small></div>
+    <p class="muted">За год со скидкой 15%: {{ plans[12].price(price) }} ₽</p>
+    <ul class="checks">
+      <li>Отдельный сервер в Европе только для вас</li>
+      <li>Телефоны, планшеты и компьютеры всей семьи</li>
+      <li>Смена адреса при блокировке бесплатно</li>
+      <li>Помощь живого человека в Telegram</li>
+    </ul>
+    <a class="btn big block" href="{{ '/cabinet' if user else '/login' }}">Заказать сервер</a>
+  </div>
+</section>
+
+<section class="section narrow" style="margin:0 auto">
+  <h2>Частые вопросы</h2>
+  <details class="faq">
+    <summary>Я совсем не разбираюсь в технике. Справлюсь?</summary>
+    <p>Да. Всё сложное делаем мы. Вам нужно только отправить близким ссылку, а им поставить приложение и нажать кнопку «Добавить». Если что-то не получится, напишите нам, поможем.</p>
+  </details>
+  <details class="faq">
+    <summary>Что такое VPN простыми словами?</summary>
+    <p>Это защищённый «тоннель» от вашего телефона до сервера за границей. Через него привычные сайты и приложения открываются так, будто вы в Европе, а то, что вы делаете в сети, не видно посторонним.</p>
+  </details>
+  <details class="faq">
+    <summary>Сколько человек можно подключить?</summary>
+    <p>Всю семью: родителей, детей, бабушек и дедушек. Каждому отдельная ссылка, и любого можно убрать в один клик.</p>
+  </details>
+  <details class="faq">
+    <summary>Что будет, если сервер заблокируют?</summary>
+    <p>Нажмите в личном кабинете кнопку «Не работает». Мы сменим адрес сервера, обычно в течение пары часов. Переустанавливать ничего не нужно.</p>
+  </details>
+  <details class="faq">
+    <summary>Как оплатить?</summary>
+    <p>Оплата помесячно или сразу за 3 месяца или год со скидкой. Способы оплаты показаны при заказе. Если удобного способа нет, напишите в поддержку.</p>
+  </details>
+  <details class="faq">
+    <summary>Можно отказаться?</summary>
+    <p>Да, в любой момент: просто не продлевайте. Сервер работает до конца оплаченного срока.</p>
+  </details>
+</section>
+{% endblock %}

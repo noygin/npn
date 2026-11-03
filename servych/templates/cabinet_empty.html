@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Мой сервер — Сервыч{% endblock %}
+{% block wrapclass %}narrow{% endblock %}
+{% block content %}
+<h1 style="font-size:30px">Здравствуйте{% if user.name %}, {{ user.name }}{% endif %}!</h1>
+
+{% if server is none %}
+  <div class="card stack">
+    <h2 style="font-size:24px">У вас пока нет своего сервера</h2>
+    <p class="muted">Закажите его, и мы всё настроим сами. Обычно это занимает до одного дня. Когда сервер будет готов, мы напишем вам в Telegram.</p>
+    <ul class="checks">
+      <li>Отдельный сервер в Европе только для вашей семьи</li>
+      <li>Подключайте телефоны, планшеты и компьютеры</li>
+      <li>Если заблокируют, сменим адрес бесплатно</li>
+    </ul>
+    <form method="post" action="/order">
+      <button class="btn big block">Заказать сервер за {{ price }} ₽ в месяц</button>
+    </form>
+  </div>
+{% else %}
+  <div class="card stack">
+    <div class="row spread">
+      <h2 style="font-size:24px;margin:0">Готовим ваш сервер</h2>
+      <span class="status wait">Настраиваем</span>
+    </div>
+    {% if server.paid_until %}
+      <p class="muted">Оплата получена, спасибо! Мы уже настраиваем сервер. Обычно это занимает до одного дня. Когда всё будет готово, мы напишем вам в Telegram.</p>
+    {% else %}
+      <p class="muted">Заказ принят. Чтобы мы начали настройку, оплатите сервер.</p>
+      <a class="btn big block" href="/pay">Оплатить</a>
+    {% endif %}
+  </div>
+{% endif %}
+{% endblock %}

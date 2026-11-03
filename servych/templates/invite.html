@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Подключение — Сервыч{% endblock %}
+{% block wrapclass %}narrow{% endblock %}
+{% block nav %}{% endblock %}
+{% block content %}
+<h1 style="font-size:30px">Привет, {{ member.name }}!</h1>
+<p class="muted">Вас подключили к семейному VPN. Это займёт пару минут.</p>
+
+<div class="tabs" role="tablist">
+  {% for key, app in apps.items() %}
+    <button type="button" role="tab" data-tab="{{ key }}" aria-selected="{{ 'true' if loop.first else 'false' }}">{{ app.title }}</button>
+  {% endfor %}
+</div>
+
+{% for key, app in apps.items() %}
+<div class="card" data-panel="{{ key }}" {% if not loop.first %}hidden{% endif %}>
+  <ol class="steps">
+    <li>
+      <h3>Установите приложение {{ app.app }}</h3>
+      <p class="muted">Оно бесплатное.</p>
+      <a class="btn block soft" href="{{ app.store }}" target="_blank" rel="noopener">{{ app.store_title }}</a>
+    </li>
+    <li>
+      <h3>Нажмите «Добавить в {{ app.app }}»</h3>
+      <p class="muted">Приложение откроется и само добавит ваш сервер. Если спросит разрешение, нажмите «Разрешить».</p>
+      <a class="btn block big" href="{{ app.scheme }}{{ link }}">Добавить в {{ app.app }}</a>
+    </li>
+    <li>
+      <h3>Включите</h3>
+      <p class="muted">В приложении нажмите большую кнопку включения. Готово! Теперь включайте её, когда нужен VPN.</p>
+    </li>
+  </ol>
+</div>
+{% endfor %}
+
+<details class="faq">
+  <summary>Кнопка «Добавить» не сработала</summary>
+  <p>Скопируйте ссылку ниже. Потом откройте приложение, нажмите «+» вверху и выберите «Вставить из буфера».</p>
+  <p><code class="link">{{ link }}</code></p>
+  <p><button class="btn block ghost" type="button" data-copy="{{ link }}">Скопировать ссылку</button></p>
+  <p>Или нажмите в приложении «+», затем «Сканировать QR-код», и наведите камеру на этот код:</p>
+  <p style="text-align:center"><span class="qr"><img src="/qr?data={{ quote(link) }}" alt="QR-код для приложения"></span></p>
+</details>
+<details class="faq">
+  <summary>Не подключается</summary>
+  <p>Попросите того, кто вас пригласил, нажать «Не работает» в личном кабинете. Мы всё починим, переустанавливать ничего не придётся.</p>
+</details>
+{% endblock %}
+{% block scripts %}<script src="/static/app.js"></script>{% endblock %}

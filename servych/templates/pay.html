@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Оплата — Сервыч{% endblock %}
+{% block wrapclass %}narrow{% endblock %}
+{% block content %}
+<p><a href="/cabinet">‹ Мой сервер</a></p>
+<h1 style="font-size:30px">{{ 'Продлить сервер' if server.status == 'active' else 'Оплата сервера' }}</h1>
+{% if error %}<div class="notice warn">{{ error }}</div>{% endif %}
+<form method="post" action="/pay">
+  <div class="card">
+    <h2 style="font-size:20px">На какой срок</h2>
+    <div class="options">
+      {% for months, plan in plans.items() %}
+      <label class="option">
+        <input type="radio" name="months" value="{{ months }}" {% if loop.first %}checked{% endif %}>
+        <span class="box">
+          <span><strong>{{ plan.title }}</strong>{% if plan.discount %} <span class="tag">−{{ plan.discount }}%</span>{% endif %}</span>
+          <strong>{{ plan.price(price) }} ₽</strong>
+        </span>
+      </label>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="card">
+    <h2 style="font-size:20px">Как оплатить</h2>
+    <div class="options">
+      {% for code, m in methods.items() %}
+      <label class="option">
+        <input type="radio" name="method" value="{{ code }}" {% if loop.first %}checked{% endif %}>
+        <span class="box"><span><strong>{{ m.title }}</strong><br><span class="muted small">{{ m.hint }}</span></span></span>
+      </label>
+      {% endfor %}
+      <label class="option off" aria-disabled="true">
+        <input type="radio" disabled>
+        <span class="box"><span><strong>СБП</strong><br><span class="muted small">Скоро появится</span></span></span>
+      </label>
+      <label class="option">
+        <input type="radio" name="method" value="support" {% if not methods %}checked{% endif %}>
+        <span class="box"><span><strong>Через поддержку</strong><br><span class="muted small">Напишем вам в Telegram, как удобнее оплатить</span></span></span>
+      </label>
+    </div>
+  </div>
+  <button class="btn big block">Перейти к оплате</button>
+</form>
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}{{ member.name }} — Сервыч{% endblock %}
+{% block wrapclass %}narrow{% endblock %}
+{% block content %}
+<p><a href="/cabinet">‹ Мой сервер</a></p>
+<div class="card stack">
+  <div class="row">
+    <span class="avatar">{{ member.name[:1]|upper }}</span>
+    <h1 style="font-size:26px;margin:0">{{ member.name }}</h1>
+  </div>
+  <p class="muted">Отправьте это приглашение. Человек откроет его на своём телефоне или компьютере, поставит приложение и нажмёт одну кнопку.</p>
+  {% set text = 'Подключаю тебя к нашему VPN. Открой ссылку и сделай три шага:' %}
+  <a class="btn block" href="https://t.me/share/url?url={{ quote(invite_url) }}&text={{ quote(text) }}" target="_blank" rel="noopener">Отправить в Telegram</a>
+  <a class="btn block soft" href="https://wa.me/?text={{ quote(text ~ ' ' ~ invite_url) }}" target="_blank" rel="noopener">Отправить в WhatsApp</a>
+  <button class="btn block ghost" type="button" data-copy="{{ invite_url }}">Скопировать ссылку</button>
+</div>
+
+<div class="card stack" style="text-align:center">
+  <h2 style="font-size:20px">Человек рядом с вами?</h2>
+  <p class="muted">Пусть наведёт камеру своего телефона на этот код и откроет ссылку.</p>
+  <div class="qr"><img src="/qr?data={{ quote(invite_url) }}" alt="QR-код приглашения"></div>
+  <a class="btn block ghost" href="{{ invite_url }}">Подключить это устройство</a>
+</div>
+
+<form method="post" action="/people/{{ member.id }}/remove" onsubmit="return confirm('Убрать этого человека? Доступ перестанет работать сразу.')">
+  <button class="btn block danger">Убрать доступ</button>
+</form>
+{% endblock %}
+{% block scripts %}<script src="/static/app.js"></script>{% endblock %}

@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Админка — Сервыч{% endblock %}
+{% block content %}
+{% set kinds = {'new_server': '🆕 Новый сервер', 'change_ip': '🔁 Сменить IP'} %}
+<h1 style="font-size:30px">Админка</h1>
+
+<div class="card">
+  <h2 style="font-size:22px">Заявки ({{ requests|length }})</h2>
+  {% if requests %}
+  <table>
+    <tr><th>Что</th><th>Кто</th><th>Когда</th><th></th></tr>
+    {% for r in requests %}
+    <tr>
+      <td>{{ kinds.get(r.kind, r.kind) }}{% if r.server_id %} <a href="#server-{{ r.server_id }}">сервер №{{ r.server_id }}</a>{% endif %}</td>
+      <td>{{ r.name or '' }}{% if r.username %} <a href="https://t.me/{{ r.username }}">@{{ r.username }}</a>{% endif %}<br><span class="muted small">{{ r.tg_id }}</span></td>
+      <td>{{ r.created_at|date }}</td>
+      <td><form method="post" action="/admin/requests/{{ r.id }}/done"><button class="btn small ghost">Готово</button></form></td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}<p class="muted">Новых заявок нет.</p>{% endif %}
+</div>
+
+<div class="card">
+  <h2 style="font-size:22px">Платежи</h2>
+  {% if payments_list %}
+  <table>
+    <tr><th>№</th><th>Кто</th><th>Срок и сумма</th><th>Способ</th><th></th></tr>
+    {% for p in payments_list %}
+    <tr>
+      <td>{{ p.id }}</td>
+      <td>{{ p.name or '' }}{% if p.username %} @{{ p.username }}{% endif %}</td>
+      <td>{{ p.months }} мес., {{ p.amount }} ₽</td>
+      <td>{{ p.method }}</td>
+      <td>
+        {% if p.status == 'paid' %}<span class="status on">Оплачен</span>
+        {% else %}
+          <form method="post" action="/admin/payments/{{ p.id }}/paid" onsubmit="return confirm('Отметить платёж оплаченным и продлить сервер?')">
+            <button class="btn small soft">Отметить оплату</button>
+          </form>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}<p class="muted">Платежей пока нет.</p>{% endif %}
+</div>
+
+<h2 style="font-size:22px;margin-top:28px">Серверы ({{ servers|length }})</h2>
+{% for s in servers %}
+<div class="card admin-server" id="server-{{ s.id }}">
+  <div class="row spread wrap-row">
+    <strong>№{{ s.id }} · {{ s.title or 'без названия' }} · {{ s.name or '' }}{% if s.username %} @{{ s.username }}{% endif %}</strong>
+    {% if s.status == 'active' %}<span class="status on">Работает</span>{% else %}<span class="status wait">Ждёт настройки</span>{% endif %}
+  </div>
+  <p class="muted small">Людей: {{ s.people }} · оплачен до {{ s.paid_until|date }}</p>
+  <details {% if s.status != 'active' %}open{% endif %}>
+    <summary>Доступ к 3x-ui</summary>
+    <form method="post" action="/admin/servers/{{ s.id }}">
+      <label class="lbl">Название для клиента (например, «Нидерланды»)</label>
+      <input type="text" name="title" value="{{ s.title }}">
+      <label class="lbl">Адрес панели вместе с секретным путём</label>
+      <input type="text" name="panel_url" value="{{ s.panel_url }}" placeholder="https://1.2.3.4:2053/secret" required>
+      <label class="lbl">API-токен панели{% if s.api_token %} (пусто, чтобы оставить прежний){% endif %}</label>
+      <input type="text" name="api_token" value="" autocomplete="off" {% if not s.api_token %}required{% endif %}>
+      <label class="lbl">ID inbound через запятую</label>
+      <input type="text" name="inbound_ids" value="{{ s.inbound_ids|join(', ') }}" placeholder="1, 2" required>
+      <label class="lbl">Начало ссылки-подписки</label>
+      <input type="text" name="sub_url" value="{{ s.sub_url }}" placeholder="https://1.2.3.4:2096/sub" required>
+      <p class="muted small" style="margin-top:8px">После смены IP поменяйте адреса здесь и нажмите «Сохранить». Клиенту придёт сообщение, заявка на смену IP закроется.</p>
+      <button class="btn">{{ 'Сохранить' if s.status == 'active' else 'Запустить сервер' }}</button>
+    </form>
+  </details>
+  <form method="post" action="/admin/servers/{{ s.id }}/extend" class="field" style="margin-top:14px">
+    <input type="number" name="days" value="30" min="1" max="3650" style="max-width:120px">
+    <button class="btn small ghost">Продлить на дни</button>
+  </form>
+</div>
+{% else %}
+<p class="muted">Серверов пока нет.</p>
+{% endfor %}
+{% endblock %}
