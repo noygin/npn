@@ -27,6 +27,9 @@ class Settings(BaseSettings):
     free_users: list[str] = []
     # Общая с хостом папка для заявок на OpenVPN-профили (см. deploy/ovpn-helper.sh)
     ovpn_dir: str = "data/ovpn"
+    # Сайт Сервыча: бот подтверждает вход на него через Telegram
+    servych_db_path: str = "data/servych.db"
+    servych_public_url: str = ""
 
     def is_free(self, username: str | None) -> bool:
         return bool(username) and username.lower() in {

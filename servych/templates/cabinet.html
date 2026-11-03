@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Мой сервер — Сервыч{% endblock %}
+{% block wrapclass %}narrow{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="row spread" style="margin-bottom:10px">
+    <h1 style="font-size:26px;margin:0">{{ server.title or 'Ваш сервер' }}</h1>
+    {% if online %}<span class="status on">Включён</span>{% else %}<span class="status off">Не отвечает</span>{% endif %}
+  </div>
+  {% if unpaid %}
+    <div class="notice warn" style="margin:12px 0">Срок оплаты закончился {{ server.paid_until|date }}. Продлите, чтобы сервер не отключили.</div>
+    <a class="btn block" href="/pay">Продлить</a>
+  {% elif server.paid_until %}
+    <div class="row spread wrap-row">
+      <span class="muted">Оплачен до {{ server.paid_until|date }}</span>
+      <a class="btn small soft" href="/pay">Продлить</a>
+    </div>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2 style="font-size:22px">Кто подключён</h2>
+  {% if members %}
+    <ul class="people">
+      {% for m in members %}
+      <li>
+        <a class="person" href="/people/{{ m.id }}">
+          <span class="avatar">{{ m.name[:1]|upper }}</span>
+          <span class="grow">
+            <span class="name">{{ m.name }}</span><br>
+            <span class="muted small">{{ m.traffic|traffic }}</span>
+          </span>
+          <span class="chev">›</span>
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="muted">Пока никого. Начните с себя: напишите своё имя и нажмите «Добавить».</p>
+  {% endif %}
+  <form method="post" action="/people" style="margin-top:14px">
+    <label class="lbl" for="name">Добавить человека или устройство</label>
+    <div class="field">
+      <input type="text" id="name" name="name" maxlength="40" placeholder="Например, Мама или Ноутбук" required>
+      <button class="btn">Добавить</button>
+    </div>
+  </form>
+</div>
+
+<div class="card stack">
+  <h2 style="font-size:22px">Перестало работать?</h2>
+  {% if ip_request %}
+    <p class="muted">Мы уже меняем адрес сервера (заявка от {{ ip_request.created_at|date }}). Обычно это занимает пару часов. Ничего переустанавливать не нужно, мы напишем в Telegram, когда закончим.</p>
+  {% else %}
+    <p class="muted">Если у всех сразу перестало подключаться, скорее всего, адрес сервера заблокировали. Нажмите кнопку, и мы бесплатно сменим его на новый.</p>
+    <form method="post" action="/change-ip" onsubmit="return confirm('Сменить адрес сервера? Мы сделаем это в течение пары часов.')">
+      <button class="btn block ghost">Не работает, сменить адрес</button>
+    </form>
+  {% endif %}
+  {% if support %}<a class="btn block ghost" href="https://t.me/{{ support }}">Написать в поддержку</a>{% endif %}
+</div>
+{% endblock %}

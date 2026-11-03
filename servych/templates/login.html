@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Вход — Сервыч{% endblock %}
+{% block wrapclass %}narrow{% endblock %}
+{% block content %}
+<div class="card stack" style="text-align:center;padding:32px 22px">
+  <h1 style="font-size:30px">Вход через Telegram</h1>
+  {% if link %}
+    <p class="muted">Пароль не нужен. Нажмите кнопку, откроется Telegram. Там нажмите «Старт» и возвращайтесь сюда, страница откроется сама.</p>
+    <a class="btn big block" href="{{ link }}" target="_blank" rel="noopener" id="tg">Войти через Telegram</a>
+    <div class="row" style="justify-content:center;margin-top:20px" id="waiting" hidden>
+      <div class="spinner"></div><span class="muted">Ждём подтверждения из Telegram…</span>
+    </div>
+    <p class="muted small" style="margin-top:20px">Нет Telegram? Его можно бесплатно скачать в App Store или Google Play.</p>
+  {% else %}
+    <p class="muted">Вход временно недоступен. Попробуйте через несколько минут.</p>
+  {% endif %}
+</div>
+{% endblock %}
+{% block scripts %}
+{% if link %}
+<script>
+  const code = {{ code|tojson }};
+  document.getElementById("tg").addEventListener("click", () => {
+    document.getElementById("waiting").hidden = false;
+  });
+  let timer;
+  async function check() {
+    clearTimeout(timer);
+    try {
+      const r = await fetch("/login/check/" + encodeURIComponent(code), {credentials: "same-origin"});
+      const data = await r.json();
+      if (data.ok) { location.href = "/cabinet"; return; }
+    } catch (e) {}
+    timer = setTimeout(check, 2000);
+  }
+  check();
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) check(); });
+</script>
+{% endif %}
+{% endblock %}

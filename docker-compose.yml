@@ -5,5 +5,15 @@ services:
     env_file: .env
     volumes:
       - ./data:/app/data
-    # Бот стоит на одном сервере с панелью Marzban и ходит к ней по 127.0.0.1
+    # Бот стоит на одном сервере с панелью и ходит к ней по 127.0.0.1
+    network_mode: host
+
+  # Сайт Сервыча, по умолчанию на порту 8088 (SERVYCH_PORT в .env)
+  web:
+    build: .
+    command: ["python", "-m", "servych"]
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./data:/app/data
     network_mode: host
