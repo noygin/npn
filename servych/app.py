@@ -152,6 +152,17 @@ def create_app(
         plural=plural,
     )
 
+    def method_price(method: str, plan: payments.Plan) -> int:
+        """Сумма в валюте способа оплаты: звёзды для Stars, иначе рубли."""
+        if method == payments.Stars.code:
+            return plan.price(settings.servych_price_stars)
+        return plan.price(settings.servych_price_rub)
+
+    def price_text(method: str, plan: payments.Plan | None) -> str:
+        if plan is None:
+            return ""
+        return f"{method_price(method, plan)} {'⭐' if method == payments.Stars.code else '₽'}"
+
     def render(request: Request, name: str, user: dict | None = None, **ctx) -> HTMLResponse:
         message = MESSAGES.get(request.query_params.get("m", ""))
         return templates.TemplateResponse(
@@ -221,7 +232,7 @@ def create_app(
     async def login(request: Request):
         if await current_user(request):
             return go("/cabinet")
-        code = await store.new_login_code()
+        code = await store.new_login_code(base_url(request))
         bot = state["bot_username"]
         link = f"https://t.me/{bot}?start=login_{code}" if bot else ""
         return render(request, "login.html", code=code, link=link)
@@ -403,7 +414,7 @@ def create_app(
         provider = methods[method]
         try:
             invoice = await provider.create(
-                payment_id, amount, f"Сервыч: свой сервер на {plan.title}",
+                payment_id, method_price(method, plan), f"Свой сервер на {plan.title}",
                 f"{base_url(request)}/pay/{payment_id}",
             )
         except (httpx.HTTPError, payments.PaymentError):
@@ -411,7 +422,8 @@ def create_app(
             return render(request, "pay.html", user, server=server, methods=methods,
                           error="Не получилось создать счёт. Попробуйте другой способ или чуть позже.")
         await store.set_payment_link(payment_id, invoice.external_id, invoice.pay_url)
-        return RedirectResponse(invoice.pay_url, status_code=303)
+        # Счёт открывается в Telegram, а на сайте ждёт страница, которая сама увидит оплату
+        return go(f"/pay/{payment_id}")
 
     @app.get("/pay/{payment_id}", response_class=HTMLResponse)
     async def payment_status(request: Request, payment_id: int, user: dict = Depends(require_user)):
@@ -426,8 +438,9 @@ def create_app(
                     payment = await store.get_payment(payment_id)
             except (httpx.HTTPError, payments.PaymentError):
                 log.exception("payment check failed")
-        return render(request, "payment.html", user, payment=payment,
-                      plan=payments.PLANS.get(payment["months"]))
+        plan = payments.PLANS.get(payment["months"])
+        return render(request, "payment.html", user, payment=payment, plan=plan,
+                      price_text=price_text(payment["method"], plan))
 
     # Админка
 

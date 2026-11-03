@@ -6,20 +6,25 @@
   {% if payment.status == 'paid' %}
     <div class="icon" style="font-size:48px">🎉</div>
     <h1 style="font-size:28px">Оплачено, спасибо!</h1>
-    <p class="muted">{{ plan.title if plan else '' }} за {{ payment.amount }} ₽.</p>
+    <p class="muted">{{ plan.title if plan else '' }} за {{ price_text }}.</p>
     <a class="btn big block" href="/cabinet">К моему серверу</a>
   {% elif payment.method == 'support' %}
     <h1 style="font-size:28px">Заказ №{{ payment.id }}</h1>
-    <p class="muted">{{ plan.title if plan else '' }} за {{ payment.amount }} ₽. Напишите нам в Telegram номер заказа, и мы пришлём, как удобнее оплатить. Обычно отвечаем в течение часа.</p>
+    <p class="muted">{{ plan.title if plan else '' }} за {{ price_text }}. Напишите нам в Telegram номер заказа, и мы пришлём, как удобнее оплатить. Обычно отвечаем в течение часа.</p>
     {% if support %}
       <a class="btn big block" href="https://t.me/{{ support }}?text={{ ('Здравствуйте! Хочу оплатить заказ №' ~ payment.id)|urlencode }}">Написать в Telegram</a>
     {% endif %}
     <a class="btn block ghost" href="/cabinet">К моему серверу</a>
   {% else %}
-    <h1 style="font-size:28px">Ждём оплату</h1>
-    <p class="muted">{{ plan.title if plan else '' }} за {{ payment.amount }} ₽. Если вы уже оплатили, нажмите «Проверить».</p>
-    <a class="btn big block" href="/pay/{{ payment.id }}">Проверить</a>
-    {% if payment.pay_url %}<a class="btn block ghost" href="{{ payment.pay_url }}">Открыть счёт ещё раз</a>{% endif %}
+    <h1 style="font-size:28px">Оплатите счёт</h1>
+    <p class="muted">{{ plan.title if plan else '' }} за {{ price_text }}. Нажмите «Оплатить», счёт откроется в Telegram. Когда оплатите, вернитесь сюда: страница обновится сама.</p>
+    {% if payment.pay_url %}<a class="btn big block" href="{{ payment.pay_url }}" target="_blank" rel="noopener">Оплатить</a>{% endif %}
+    <a class="btn block ghost" href="/pay/{{ payment.id }}">Я оплатил, проверить</a>
   {% endif %}
 </div>
+{% endblock %}
+{% block scripts %}
+{% if payment.status == 'pending' and payment.method != 'support' %}
+<script>setTimeout(() => location.reload(), 5000);</script>
+{% endif %}
 {% endblock %}

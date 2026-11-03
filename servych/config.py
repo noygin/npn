@@ -23,6 +23,8 @@ class Settings(BaseSettings):
 
     # Цена за месяц в рублях
     servych_price_rub: int = 790
+    # Цена за месяц в Telegram Stars
+    servych_price_stars: int = 500
     # Токен Crypto Pay (@CryptoBot → Crypto Pay → Создать приложение)
     cryptobot_token: str = ""
     cryptobot_api: str = "https://pay.crypt.bot/api"
